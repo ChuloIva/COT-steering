@@ -9,4 +9,4 @@ python compare_reasoning.py --n_examples 100 --max_tokens 2000 --model meta-llam
 python compare_reasoning.py --n_examples 100 --max_tokens 2000 --model meta-llama/llama-3.3-70b-instruct # Available in OpenRouter
 python compare_reasoning.py --n_examples 100 --max_tokens 2000 --model Qwen/Qwen2.5-Math-1.5B # Not available in OpenRouter
 python compare_reasoning.py --n_examples 100 --max_tokens 2000 --model Qwen/Qwen2.5-14B-Instruct # Not available in OpenRouter
-python compare_reasoning.py --n_examples 100 --max_tokens 2000 --model qwen/qwen2.5-32b-instruct # Available in OpenRouter
+python compare_reasoning.py --n_examples 100 --max_tokens 2000 --model Qwen/Qwen2.5-32B-Instruct # Not available in OpenRouter

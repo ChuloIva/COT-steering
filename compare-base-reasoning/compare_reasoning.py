@@ -34,14 +34,13 @@ MODEL_CONFIG = {
         'deepseek/deepseek-r1-distill-qwen-32b': 'DeepSeek-R1-Qwen-32B',
         'meta-llama/llama-3.1-8b-instruct': 'Llama-3.1-8B',
         'meta-llama/llama-3.3-70b-instruct': 'Llama-3.3-70B',
-        'qwen/qwen2.5-32b-instruct': 'Qwen-2.5-32B',
     },
     
     # Local Models: model_id to display name mapping
     'LOCAL_MODELS': {
         'Qwen/Qwen2.5-14B-Instruct': 'Qwen-2.5-14B',
         'Qwen/Qwen2.5-Math-1.5B': 'Qwen-2.5-Math-1.5B',
-        'deepseek-ai/DeepSeek-R1-Distill-Qwen-32B': 'DeepSeek-Qwen-32B'
+        'Qwen/Qwen2.5-32B-Instruct': 'Qwen-2.5-32B',
     },
     
     # Thinking Models (for visualization grouping)
