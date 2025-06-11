@@ -237,13 +237,15 @@ def plot_comparison(results_dict, labels):
         '#1565C0',  # Darkest blue
         '#1976D2',  # Dark blue
         '#1E88E5',  # Medium blue
-        '#64B5F6'   # Lightest blue
+        '#64B5F6',  # Lightest blue
+        '#BBDEFB'   # Very light blue
     ]
     non_thinking_colors = [
         '#E65100',  # Darkest orange
         '#F57C00',  # Dark orange
         '#FF9800',  # Medium orange
-        '#FFA726'   # Lightest orange
+        '#FFA726',  # Lightest orange
+        '#FFE0B2'   # Very light orange
     ]
     
     # Calculate width based on number of models
