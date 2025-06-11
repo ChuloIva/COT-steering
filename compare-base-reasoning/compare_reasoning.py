@@ -13,12 +13,12 @@ from tqdm import tqdm
 import glob
 import torch
 
-from utils import chat
+from utils import chat, steering_config, process_batch_annotations
 from messages import messages
 
 # Model Configuration
 MODEL_CONFIG = {
-    # API Models
+    # API Models: model_id to display name mapping
     'API_MODELS': {
         'gpt-4o': 'GPT-4o',
         'claude-3-opus': 'Claude-3-Opus',
@@ -26,13 +26,17 @@ MODEL_CONFIG = {
         'gemini-2-0-think': 'Gemini-2-0-Think',
         'gemini-2-0-flash': 'Gemini-2-0-Flash',
         'deepseek-v3': 'DeepSeek-V3',
-        'deepseek-r1': 'DeepSeek-R1'
+        'deepseek-r1': 'DeepSeek-R1',
+        'deepseek/deepseek-r1-distill-llama-8b': 'DeepSeek-R1-Llama-8B',
+        'deepseek/deepseek-r1-distill-qwen-14b': 'DeepSeek-R1-Qwen-14B',
+        'deepseek/deepseek-r1-distill-qwen-1.5b': 'DeepSeek-R1-Qwen-1.5B',
+        'meta-llama/llama-3.1-8b-instruct': 'Llama-3.1-8B',
     },
     
-    # Local Models
+    # Local Models: model_id to display name mapping
     'LOCAL_MODELS': {
-        'deepseek-ai/DeepSeek-R1-Distill-Llama-8B': 'DeepSeek-Llama-8B',
-        'deepseek-ai/DeepSeek-R1-Distill-Qwen-14B': 'DeepSeek-Qwen-14B',
+        'Qwen/Qwen2.5-14B-Instruct': 'Qwen-2.5-14B',
+        'Qwen/Qwen2.5-Math-1.5B': 'Qwen-2.5-Math-1.5B',
         'deepseek-ai/DeepSeek-R1-Distill-Qwen-32B': 'DeepSeek-Qwen-32B'
     },
     
@@ -93,7 +97,7 @@ args, _ = parser.parse_known_args()
 def get_label_counts(thinking_process, labels, annotate_response=True):
     if annotate_response:
         # Get annotated version using chat function
-        annotated_response = utils.process_batch_annotations([thinking_process])[0]
+        annotated_response = process_batch_annotations([thinking_process])[0]
     else:
         annotated_response = thinking_process
     
@@ -128,18 +132,17 @@ def process_chat_response(message, model_name, model, tokenizer, labels):
     """Process a single message through chat function or model"""
     if is_api_model(model_name) and not is_thinking_model(model_name):
         # API model case (OpenAI models)
-        response = chat(f"""
-        Please answer the following question:
-        
-        Question:
-        {message["content"]}
-        
-        Please format your response like this:
-        <think>
-        ...
-        </think>
-        [Your answer here]
-        """,
+        response = chat(f"""Please answer the following question:
+
+Question:
+{message["content"]}
+
+Please format your response like this:
+<think>
+...
+</think>
+[Your answer here]
+""",
         model=model_name,
         max_tokens=args.max_tokens
         )
@@ -319,7 +322,7 @@ if model_name.startswith("deepseek-ai/"):
 else:
     model_id = model_name.lower()
 
-labels = list(list(utils.steering_config.values())[0].keys())
+labels = list(list(steering_config.values())[0].keys())
 
 # Create directories
 os.makedirs('results/vars', exist_ok=True)
