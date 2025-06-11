@@ -28,7 +28,7 @@ def chat(prompt, model="gpt-4.1", max_tokens=28000):
     elif model in ["claude-3-opus", "claude-3-7-sonnet", "claude-3-5-haiku"]:
         model_provider = "anthropic"
         client = anthropic.Anthropic()
-    elif "deepseek" in model or "gemini" in model:
+    elif "deepseek" in model or "gemini" in model or "qwen" in model or "meta-llama" in model:
         model_provider = "openrouter"
         client = OpenAI(
             base_url="https://openrouter.ai/api/v1",
