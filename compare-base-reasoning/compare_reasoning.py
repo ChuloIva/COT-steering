@@ -46,9 +46,11 @@ MODEL_CONFIG = {
     
     # Thinking Models (for visualization grouping)
     'THINKING_MODELS': [
-        'deepseek-llama-8b',
-        'deepseek-qwen-14b',
-        'deepseek-qwen-32b',
+        'deepseek-r1-distill-llama-8b',
+        'deepseek-r1-distill-llama-70b',
+        'deepseek-r1-distill-qwen-1.5b',
+        'deepseek-r1-distill-qwen-14b',
+        'deepseek-r1-distill-qwen-32b',
         'claude-3-7-sonnet',
         'gemini-2-0-think',
         'deepseek-r1'
