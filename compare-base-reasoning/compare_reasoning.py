@@ -317,10 +317,7 @@ model_name = args.model
 compute_from_json = args.compute_from_json
 
 # Get a shorter model_id for file naming
-if model_name.startswith("deepseek-ai/"):
-    model_id = model_name.split('/')[-1].lower()
-else:
-    model_id = model_name.lower()
+model_id = model_name.split('/')[-1].lower()
 
 labels = list(list(steering_config.values())[0].keys())
 
