@@ -16,6 +16,7 @@ from openai import OpenAI
 import json
 import re
 import numpy as np
+import traceback
 
 def chat(prompt, model="gpt-4.1", max_tokens=28000):
 
@@ -27,20 +28,20 @@ def chat(prompt, model="gpt-4.1", max_tokens=28000):
     elif model in ["claude-3-opus", "claude-3-7-sonnet", "claude-3-5-haiku"]:
         model_provider = "anthropic"
         client = anthropic.Anthropic()
-    elif model in ["deepseek-v3", "gemini-2-0-think", "gemini-2-0-flash", "deepseek-r1"]:
+    elif "deepseek" in model or "gemini" in model:
         model_provider = "openrouter"
         client = OpenAI(
             base_url="https://openrouter.ai/api/v1",
             api_key=os.getenv("OPENROUTER_API_KEY"),
         )
+    else:
+        raise ValueError(f"Model {model} is not supported. Please use a valid model name.")
 
     # try 3 times with 3 second sleep between attempts
     for _ in range(3):
         try:
             if model_provider == "openai":
-                client = OpenAI(
-                    organization="org-E6iEJQGSfb0SNHMw6NFT1Cmi",
-                )
+                client = OpenAI()
                 response = client.chat.completions.create(
                     model=model,
                     messages=[
@@ -121,7 +122,7 @@ def chat(prompt, model="gpt-4.1", max_tokens=28000):
                 }
                 
                 response = client.chat.completions.create(
-                    model=model_mapping[model],
+                    model=model_mapping.get(model, model),
                     extra_body={},
                     messages=[
                         {
@@ -143,6 +144,7 @@ def chat(prompt, model="gpt-4.1", max_tokens=28000):
             
         except Exception as e:
             print(f"Error: {e}")
+            print(traceback.format_exc())
             time.sleep(20)
 
     return None
