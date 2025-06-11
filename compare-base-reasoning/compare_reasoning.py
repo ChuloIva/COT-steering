@@ -28,6 +28,7 @@ MODEL_CONFIG = {
         'deepseek-v3': 'DeepSeek-V3',
         'deepseek-r1': 'DeepSeek-R1',
         'deepseek/deepseek-r1-distill-llama-8b': 'DeepSeek-R1-Llama-8B',
+        'deepseek/deepseek-r1-distill-llama-70b': 'DeepSeek-R1-Llama-70B',
         'deepseek/deepseek-r1-distill-qwen-1.5b': 'DeepSeek-R1-Qwen-1.5B',
         'deepseek/deepseek-r1-distill-qwen-14b': 'DeepSeek-R1-Qwen-14B',
         'deepseek/deepseek-r1-distill-qwen-32b': 'DeepSeek-R1-Qwen-32B',
