@@ -28,9 +28,12 @@ MODEL_CONFIG = {
         'deepseek-v3': 'DeepSeek-V3',
         'deepseek-r1': 'DeepSeek-R1',
         'deepseek/deepseek-r1-distill-llama-8b': 'DeepSeek-R1-Llama-8B',
-        'deepseek/deepseek-r1-distill-qwen-14b': 'DeepSeek-R1-Qwen-14B',
         'deepseek/deepseek-r1-distill-qwen-1.5b': 'DeepSeek-R1-Qwen-1.5B',
+        'deepseek/deepseek-r1-distill-qwen-14b': 'DeepSeek-R1-Qwen-14B',
+        'deepseek/deepseek-r1-distill-qwen-32b': 'DeepSeek-R1-Qwen-32B',
         'meta-llama/llama-3.1-8b-instruct': 'Llama-3.1-8B',
+        'meta-llama/llama-3.3-70b-instruct': 'Llama-3.3-70B',
+        'qwen/qwen2.5-32b-instruct': 'Qwen-2.5-32B',
     },
     
     # Local Models: model_id to display name mapping
