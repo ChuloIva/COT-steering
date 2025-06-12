@@ -193,6 +193,7 @@ Please format your response like this:
 def plot_comparison(results_dict, labels):
     """Plot comparison between multiple models' results"""
     os.makedirs('results/figures', exist_ok=True)
+    print(labels)
     
     # Get model names and prepare data
     model_names = list(results_dict.keys())
@@ -286,7 +287,7 @@ def plot_comparison(results_dict, labels):
     
     # Set y-axis limit with more headroom and add label
     ymax = max([max(means) for means in means_dict.values()])
-    ax.set_ylim(0, ymax * 1.15)  # Add 15% headroom
+    ax.set_ylim(0, ymax * 1.60)  # Add 60% headroom
     ax.set_ylabel('Sentence Fraction', fontsize=16)  # Add y-axis label
     
     # Convert y-axis to percentage
@@ -327,6 +328,8 @@ compute_from_json = args.compute_from_json
 model_id = model_name.split('/')[-1].lower()
 
 labels = list(list(steering_config.values())[0].keys())
+labels.append('initializing')
+labels.append('deduction')
 
 # Create directories
 os.makedirs('results/vars', exist_ok=True)
