@@ -96,6 +96,7 @@ parser.add_argument("--compute_from_json", action="store_true",
 parser.add_argument("--seed", type=int, default=42, help="Random seed")
 parser.add_argument("--max_tokens", type=int, default=100, help="Number of max tokens")
 parser.add_argument("--skip_viz", action="store_true", help="Skip visualization at the end")
+parser.add_argument("--ignore-common-labels", action="store_true", help="Ignore initializing and deduction labels")
 args, _ = parser.parse_known_args()
 
 # %%
@@ -331,6 +332,10 @@ labels = list(list(steering_config.values())[0].keys())
 labels.append('initializing')
 labels.append('deduction')
 
+if args.ignore_common_labels:
+    labels.remove('initializing')
+    labels.remove('deduction')
+
 # Create directories
 os.makedirs('results/vars', exist_ok=True)
 os.makedirs('results/figures', exist_ok=True)
@@ -353,6 +358,16 @@ if compute_from_json:
     print(f"Loading existing results for {model_name}...")
     with open(f'results/vars/reasoning_comparison_{model_id}.json', 'r') as f:
         results = json.load(f)
+    
+    # Re-compute label fractions from loaded results
+    print("Re-computing label fractions for all loaded responses...")
+    for result in tqdm(results, desc="Re-computing scores from JSON"):
+        label_fractions, annotated_response = get_label_counts(
+            result.get('thinking_process', ''), 
+            labels
+        )
+        result['label_fractions'] = label_fractions
+        result['annotated_response'] = annotated_response
 else:
     # Run new evaluation
     print(f"Running evaluation for {model_name}...")
