@@ -93,6 +93,8 @@ parser.add_argument("--n_examples", type=int, default=10,
                     help="Number of examples to use for evaluation")
 parser.add_argument("--compute_from_json", action="store_true", 
                     help="Recompute scores from existing json instead of generating new responses")
+parser.add_argument("--re_compute_scores", action="store_true", 
+                    help="Recompute scores from existing json instead of generating new responses")
 parser.add_argument("--seed", type=int, default=42, help="Random seed")
 parser.add_argument("--max_tokens", type=int, default=100, help="Number of max tokens")
 parser.add_argument("--skip_viz", action="store_true", help="Skip visualization at the end")
@@ -324,6 +326,7 @@ n_examples = args.n_examples
 random.seed(args.seed)
 model_name = args.model
 compute_from_json = args.compute_from_json
+re_compute_scores = args.re_compute_scores
 
 # Get a shorter model_id for file naming
 model_id = model_name.split('/')[-1].lower()
@@ -344,12 +347,6 @@ os.makedirs('results/figures', exist_ok=True)
 model = None
 tokenizer = None
 
-if not is_api_model(model_name):
-    # Load model using the utils function
-    import utils
-    print(f"Loading model {model_name}...")
-    model, tokenizer, _ = utils.load_model_and_vectors(compute_features=False, model_name=model_name)
-
 results = []
 
 # %%
@@ -360,17 +357,28 @@ if compute_from_json:
         results = json.load(f)
     
     # Re-compute label fractions from loaded results
-    print("Re-computing label fractions for all loaded responses...")
-    for result in tqdm(results, desc="Re-computing scores from JSON"):
-        label_fractions, annotated_response = get_label_counts(
-            result.get('thinking_process', ''), 
-            labels
-        )
-        result['label_fractions'] = label_fractions
-        result['annotated_response'] = annotated_response
+    if re_compute_scores:
+        print("Re-computing label fractions for all loaded responses...")
+        for result in tqdm(results, desc="Re-computing scores from JSON"):
+            label_fractions, annotated_response = get_label_counts(
+                result.get('thinking_process', ''), 
+                labels
+            )
+            result['label_fractions'] = label_fractions
+            result['annotated_response'] = annotated_response
+        # Save updated results
+        with open(f'results/vars/reasoning_comparison_{model_id}.json', 'w') as f:
+            json.dump(results, f, indent=2)
+        print(f"Re-computed {len(results)} examples for {model_name}")
 else:
     # Run new evaluation
     print(f"Running evaluation for {model_name}...")
+
+    if not is_api_model(model_name):
+        # Load model using the utils function
+        import utils
+        print(f"Loading model {model_name}...")
+        model, tokenizer, _ = utils.load_model_and_vectors(compute_features=False, model_name=model_name)
     
     # Randomly sample evaluation examples
     eval_indices = random.sample(range(len(messages)), n_examples)
