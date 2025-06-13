@@ -433,7 +433,7 @@ def plot_comparison_fractions(results_dict, labels):
     
     ymax = max([max(means) for means in means_dict.values()]) if means_dict else 1
     ax.set_ylim(0, ymax * 1.75)
-    ax.set_ylabel('Average Sentence Fraction', fontsize=16)
+    ax.set_ylabel('Average Sentence Fraction Per Response', fontsize=16)
     ax.set_xlabel("Behavioral patterns", fontsize=16)
     
     ax.yaxis.set_major_formatter(plt.FuncFormatter(lambda y, _: '{:.0f}%'.format(y * 100)))
