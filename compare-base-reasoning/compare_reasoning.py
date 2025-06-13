@@ -194,7 +194,7 @@ Please format your response like this:
         "annotated_response": annotated_response
     }
 
-def plot_comparison(results_dict, labels):
+def plot_comparison_counts(results_dict, labels):
     """Plot comparison between multiple models' results"""
     os.makedirs('results/figures', exist_ok=True)
     print(labels)
@@ -336,7 +336,125 @@ def plot_comparison(results_dict, labels):
     
     # Adjust layout and save with high quality
     plt.tight_layout()
-    plt.savefig(f'results/figures/reasoning_comparison_all_models.pdf', 
+    plt.savefig(f'results/figures/reasoning_comparison_all_models_counts.pdf', 
+                dpi=300, bbox_inches='tight', 
+                facecolor='white', edgecolor='none')
+    plt.show()
+    plt.close()
+
+def plot_comparison_fractions(results_dict, labels):
+    """Plot comparison between multiple models' results as fractions"""
+    os.makedirs('results/figures', exist_ok=True)
+    
+    model_names = list(results_dict.keys())
+    means_dict = {}
+    
+    # Separate models into thinking and non-thinking groups
+    thinking_names = [name for name in model_names if is_thinking_model(name)]
+    non_thinking_names = [name for name in model_names if not is_thinking_model(name)]
+    
+    # Calculate means of fractions for each model and label
+    for model_name in model_names:
+        model_label_fractions = {label: [] for label in labels}
+        for result in results_dict[model_name]:
+            label_counts = result.get('label_counts', {})
+            total_sentences = sum(label_counts.values())
+            
+            if total_sentences > 0:
+                for label in labels:
+                    fraction = label_counts.get(label, 0) / total_sentences
+                    model_label_fractions[label].append(fraction)
+            else:
+                for label in labels:
+                    model_label_fractions[label].append(0)
+        
+        means_dict[model_name] = [np.mean(model_label_fractions[label]) for label in labels]
+
+    # Calculate average performance across all labels for each model
+    model_avg_performance = {
+        model_name: np.mean(means_dict[model_name]) 
+        for model_name in model_names
+    }
+    
+    # Sort models within each group by their average performance
+    thinking_names = sorted(thinking_names, key=lambda x: model_avg_performance[x], reverse=True)
+    non_thinking_names = sorted(non_thinking_names, key=lambda x: model_avg_performance[x], reverse=True)
+    
+    # Create bar plot with wider aspect ratio
+    plt.style.use('seaborn-v0_8-paper')
+    fig, ax = plt.subplots(figsize=(16, 6))
+    x = np.arange(len(labels))
+    
+    for spine in ax.spines.values():
+        spine.set_color('black')
+        spine.set_linewidth(1.5)
+    
+    thinking_colors = ['#1565C0', '#1976D2', '#1E88E5', '#64B5F6', '#BBDEFB']
+    non_thinking_colors = ['#E65100', '#F57C00', '#FF9800', '#FFA726', '#FFE0B2']
+    
+    width = min(0.35, 0.8 / len(model_names))
+    
+    n_thinking = len(thinking_names)
+    n_non_thinking = len(non_thinking_names)
+    gap = width * 0.5 if n_thinking > 0 and n_non_thinking > 0 else 0
+    
+    for i, model_name in enumerate(thinking_names):
+        color_idx = i if i < len(thinking_colors) else len(thinking_colors) - 1
+        ax.bar(x + width * i, means_dict[model_name], width, 
+               label=model_name, color=thinking_colors[color_idx], 
+               alpha=0.85, edgecolor='black', linewidth=1)
+    
+    for i, model_name in enumerate(non_thinking_names):
+        color_idx = i if i < len(non_thinking_colors) else len(non_thinking_colors) - 1
+        ax.bar(x + width * (i + n_thinking) + gap, means_dict[model_name], width, 
+               label=model_name, color=non_thinking_colors[color_idx], 
+               alpha=0.85, edgecolor='black', linewidth=1)
+
+    if n_thinking > 0:
+        for i in range(len(labels)):
+            means = [means_dict[name][i] for name in thinking_names]
+            group_mean = np.mean(means)
+            group_center_x = x[i] + width * (n_thinking - 1) / 2
+            max_h = max(means) if means else 0
+            ax.text(group_center_x, max_h + 0.02, f"Mean: {group_mean*100:.0f}%",
+                    ha='center', va='bottom', fontsize=14, color='black')
+
+    if n_non_thinking > 0:
+        for i in range(len(labels)):
+            means = [means_dict[name][i] for name in non_thinking_names]
+            group_mean = np.mean(means)
+            group_center_x = x[i] + width * (n_thinking + (n_non_thinking - 1) / 2) + gap
+            max_h = max(means) if means else 0
+            ax.text(group_center_x, max_h + 0.02, f"Mean: {group_mean*100:.0f}%",
+                    ha='center', va='bottom', fontsize=14, color='black')
+
+    ax.yaxis.grid(True, linestyle='--', alpha=0.7, zorder=0)
+    ax.set_axisbelow(True)
+    
+    ymax = max([max(means) for means in means_dict.values()]) if means_dict else 1
+    ax.set_ylim(0, ymax * 1.75)
+    ax.set_ylabel('Average Sentence Fraction', fontsize=16)
+    ax.set_xlabel("Behavioral patterns", fontsize=16)
+    
+    ax.yaxis.set_major_formatter(plt.FuncFormatter(lambda y, _: '{:.0f}%'.format(y * 100)))
+    
+    tick_pos = x + (n_thinking * width + n_non_thinking * width + gap) / 2 - width / 2
+    ax.set_xticks(tick_pos)
+    formatted_labels = [label.replace('-', ' ').title() for label in labels]
+    formatted_labels = [label.replace(' ', '\n') for label in formatted_labels]
+    ax.set_xticklabels(formatted_labels, rotation=0, ha='center', fontsize=16)
+    ax.tick_params(axis='y', labelsize=16)
+    
+    for label_idx in x:
+        group_separator = label_idx + width * len(thinking_names) + gap/2
+        ax.axvline(x=group_separator, color='gray', linestyle='--', alpha=0.3, zorder=0)
+    
+    ax.legend(fontsize=16, frameon=True, framealpha=1, 
+             edgecolor='black', bbox_to_anchor=(1, 1.02), 
+             loc='upper right', ncol=2)
+    
+    plt.tight_layout()
+    plt.savefig('results/figures/reasoning_comparison_all_models_fractions.pdf', 
                 dpi=300, bbox_inches='tight', 
                 facecolor='white', edgecolor='none')
     plt.show()
@@ -420,7 +538,7 @@ def plot_avg_sentences_per_response(results_dict):
                     ha='left', va='center', fontsize=12)
 
     plt.tight_layout()
-    plt.savefig('results/figures/avg_sentences_per_response.pdf', 
+    plt.savefig('results/figures/reasoning_comparison_all_models_avg_count.pdf', 
                 dpi=300, bbox_inches='tight', 
                 facecolor='white', edgecolor='none')
     plt.show()
@@ -535,7 +653,8 @@ if not args.skip_viz:
     
     # Generate visualization with all models
     if all_results:
-        plot_comparison(all_results, labels)
+        plot_comparison_counts(all_results, labels)
+        plot_comparison_fractions(all_results, labels)
         plot_avg_sentences_per_response(all_results)
     else:
         print("No results found for visualization")
