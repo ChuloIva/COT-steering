@@ -85,6 +85,16 @@ def is_local_model(model_name):
     """Check if the model is a local model"""
     return model_name in MODEL_CONFIG['LOCAL_MODELS']
 
+def extract_thinking_process(response_text):
+    """Extracts the thinking process from between <think> and </think> tags."""
+    think_start = 0
+    think_end = len(response_text)
+    if '<think>' in response_text:
+        think_start = response_text.index('<think>') + len('<think>')
+    if '</think>' in response_text:
+        think_end = response_text.index('</think>')
+    return response_text[think_start:think_end].strip()
+
 # Parse arguments
 parser = argparse.ArgumentParser(description="Compare reasoning abilities between models")
 parser.add_argument("--model", type=str, default="gemini-2-0-think", 
@@ -179,12 +189,7 @@ Please format your response like this:
         response = tokenizer.decode(outputs[0], skip_special_tokens=True)
     
     # Extract thinking process
-    think_start = response.index("<think>") + len("<think>") if "<think>" in response else 0
-    try:
-        think_end = response.index("</think>") if "</think>" in response else len(response)
-    except ValueError:
-        think_end = len(response)
-    thinking_process = response[think_start:think_end].strip()
+    thinking_process = extract_thinking_process(response)
     
     label_fractions, annotated_response = get_label_counts(thinking_process, labels)
     
@@ -364,14 +369,7 @@ if compute_from_json:
         for result in tqdm(results, desc="Re-computing scores from JSON"):
             thinking_process = result.get('thinking_process', '')
             if thinking_process == '' or thinking_process == 'None':
-                thinking_process = result.get('response', '')
-                think_start = 0
-                think_end = len(thinking_process)
-                if '<think>' in thinking_process:
-                    think_start = thinking_process.index('<think>') + len('<think>')
-                if '</think>' in thinking_process:
-                    think_end = thinking_process.index('</think>')
-                thinking_process = thinking_process[think_start:think_end].strip()
+                thinking_process = extract_thinking_process(result.get('response', ''))
                 result['thinking_process'] = thinking_process
 
             assert thinking_process != '', f"**ERROR** No thinking process found for {result['response']}"
