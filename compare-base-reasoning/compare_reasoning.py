@@ -95,6 +95,8 @@ parser.add_argument("--compute_from_json", action="store_true",
                     help="Recompute scores from existing json instead of generating new responses")
 parser.add_argument("--re_compute_scores", action="store_true", 
                     help="Recompute scores from existing json instead of generating new responses")
+parser.add_argument("--re_annotate_responses", action="store_true", 
+                    help="Re-annotate responses with new annotations")
 parser.add_argument("--seed", type=int, default=42, help="Random seed")
 parser.add_argument("--max_tokens", type=int, default=100, help="Number of max tokens")
 parser.add_argument("--skip_viz", action="store_true", help="Skip visualization at the end")
@@ -360,9 +362,24 @@ if compute_from_json:
     if re_compute_scores:
         print("Re-computing label fractions for all loaded responses...")
         for result in tqdm(results, desc="Re-computing scores from JSON"):
+            thinking_process = result.get('thinking_process', '')
+            if thinking_process == '' or thinking_process == 'None':
+                thinking_process = result.get('response', '')
+                think_start = 0
+                think_end = len(thinking_process)
+                if '<think>' in thinking_process:
+                    think_start = thinking_process.index('<think>') + len('<think>')
+                if '</think>' in thinking_process:
+                    think_end = thinking_process.index('</think>')
+                thinking_process = thinking_process[think_start:think_end].strip()
+                result['thinking_process'] = thinking_process
+
+            assert thinking_process != '', f"**ERROR** No thinking process found for {result['response']}"
+                
             label_fractions, annotated_response = get_label_counts(
-                result.get('thinking_process', ''), 
-                labels
+                thinking_process, 
+                labels,
+                annotate_response=args.re_annotate_responses
             )
             result['label_fractions'] = label_fractions
             result['annotated_response'] = annotated_response
