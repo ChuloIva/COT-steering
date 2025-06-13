@@ -293,13 +293,32 @@ def plot_comparison(results_dict, labels):
                      linewidth=1)
         bars_list.append(bars)
     
+    # Add mean text over each group of bars
+    if n_thinking > 0:
+        for i in range(len(labels)):
+            thinking_means_for_label = [means_dict[name][i] for name in thinking_names]
+            group_mean = np.mean(thinking_means_for_label)
+            group_center_x = x[i] + width * (n_thinking - 1) / 2
+            max_bar_height = max(thinking_means_for_label)
+            ax.text(group_center_x, max_bar_height + 0.02, f"Mean: {group_mean*100:.0f}%",
+                    ha='center', va='bottom', fontsize=10, color='black', fontweight='bold')
+
+    if n_non_thinking > 0:
+        for i in range(len(labels)):
+            non_thinking_means_for_label = [means_dict[name][i] for name in non_thinking_names]
+            group_mean = np.mean(non_thinking_means_for_label)
+            group_center_x = x[i] + width * (n_thinking + (n_non_thinking - 1) / 2) + gap
+            max_bar_height = max(non_thinking_means_for_label)
+            ax.text(group_center_x, max_bar_height + 0.02, f"Mean: {group_mean*100:.0f}%",
+                    ha='center', va='bottom', fontsize=10, color='black', fontweight='bold')
+    
     # Improve grid and ticks
     ax.yaxis.grid(True, linestyle='--', alpha=0.7, zorder=0)
     ax.set_axisbelow(True)  # Put grid below bars
     
     # Set y-axis limit with more headroom and add label
     ymax = max([max(means) for means in means_dict.values()])
-    ax.set_ylim(0, ymax * 1.60)  # Add 60% headroom
+    ax.set_ylim(0, ymax * 1.70)  # Add 70% headroom
     ax.set_ylabel('Sentence Fraction', fontsize=16)  # Add y-axis label
     
     # Convert y-axis to percentage
