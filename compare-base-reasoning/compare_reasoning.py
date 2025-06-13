@@ -363,7 +363,7 @@ def plot_comparison_counts_and_fractions(results_dict, labels):
     fig.suptitle("Comparison of Reasoning Patterns Across Models", fontsize=20)
     
     _plot_comparison_subplot(ax1, results_dict, labels, plot_type='fractions', show_legend=True, hide_x_label=True)
-    # ax1.tick_params(labelbottom=True, labelsize=16)
+    ax1.tick_params(labelbottom=True, labelsize=16)
     _plot_comparison_subplot(ax2, results_dict, labels, plot_type='counts', show_legend=False, hide_x_label=False)
     
     plt.tight_layout(rect=[0, 0, 1, 0.98])
