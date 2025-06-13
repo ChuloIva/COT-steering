@@ -114,12 +114,12 @@ parser.add_argument("--ignore-common-labels", action="store_true", help="Ignore 
 args, _ = parser.parse_known_args()
 
 # %%
-def get_label_counts(thinking_process, labels, annotate_response=True):
-    if annotate_response:
+def get_label_counts(thinking_process, labels, existing_annotated_response=None):
+    if existing_annotated_response is None:
         # Get annotated version using chat function
         annotated_response = process_batch_annotations([thinking_process])[0]
     else:
-        annotated_response = thinking_process
+        annotated_response = existing_annotated_response
     
     # Initialize token counts for each label
     label_counts = {label: 0 for label in labels}
@@ -140,13 +140,7 @@ def get_label_counts(thinking_process, labels, annotate_response=True):
             label_counts[label] += 1
             total += 1
     
-    # Convert to fractions
-    label_fractions = {
-        label: count / total if total > 0 else 0 
-        for label, count in label_counts.items()
-    }
-            
-    return label_fractions, annotated_response
+    return label_counts, annotated_response
 
 def process_chat_response(message, model_name, model, tokenizer, labels):
     """Process a single message through chat function or model"""
@@ -191,12 +185,12 @@ Please format your response like this:
     # Extract thinking process
     thinking_process = extract_thinking_process(response)
     
-    label_fractions, annotated_response = get_label_counts(thinking_process, labels)
+    label_counts, annotated_response = get_label_counts(thinking_process, labels, existing_annotated_response=None)
     
     return {
         "response": response,
         "thinking_process": thinking_process,
-        "label_fractions": label_fractions,
+        "label_counts": label_counts,
         "annotated_response": annotated_response
     }
 
@@ -218,8 +212,8 @@ def plot_comparison(results_dict, labels):
     for model_name in model_names:
         means_dict[model_name] = []
         for label in labels:
-            label_fracs = [ex["label_fractions"].get(label, 0) for ex in results_dict[model_name]]
-            means_dict[model_name].append(np.mean(label_fracs))
+            label_counts = [ex["label_counts"].get(label, 0) for ex in results_dict[model_name]]
+            means_dict[model_name].append(np.mean(label_counts))
     
     # Calculate average performance across all labels for each model
     model_avg_performance = {
@@ -300,7 +294,7 @@ def plot_comparison(results_dict, labels):
             group_mean = np.mean(thinking_means_for_label)
             group_center_x = x[i] + width * (n_thinking - 1) / 2
             max_bar_height = max(thinking_means_for_label)
-            ax.text(group_center_x, max_bar_height + 0.02, f"Mean: {group_mean*100:.0f}%",
+            ax.text(group_center_x, max_bar_height + 0.02, f"Mean: {group_mean:.1f}",
                     ha='center', va='bottom', fontsize=14, color='black')
 
     if n_non_thinking > 0:
@@ -309,7 +303,7 @@ def plot_comparison(results_dict, labels):
             group_mean = np.mean(non_thinking_means_for_label)
             group_center_x = x[i] + width * (n_thinking + (n_non_thinking - 1) / 2) + gap
             max_bar_height = max(non_thinking_means_for_label)
-            ax.text(group_center_x, max_bar_height + 0.02, f"Mean: {group_mean*100:.0f}%",
+            ax.text(group_center_x, max_bar_height + 0.02, f"Mean: {group_mean:.1f}",
                     ha='center', va='bottom', fontsize=14, color='black')
     
     # Improve grid and ticks
@@ -317,13 +311,10 @@ def plot_comparison(results_dict, labels):
     ax.set_axisbelow(True)  # Put grid below bars
     
     # Set y-axis limit with more headroom and add label
-    ymax = max([max(means) for means in means_dict.values()])
+    ymax = max([max(means) for means in means_dict.values()]) if means_dict else 1
     ax.set_ylim(0, ymax * 1.75)  # Add 75% headroom
-    ax.set_ylabel('Sentence Fraction', fontsize=16)  # Add y-axis label
+    ax.set_ylabel('Average Sentence Count Per Response', fontsize=16)  # Add y-axis label
     ax.set_xlabel("Behavioral patterns", fontsize=16)
-    
-    # Convert y-axis to percentage
-    ax.yaxis.set_major_formatter(plt.FuncFormatter(lambda y, _: '{:.0f}%'.format(y * 100)))
     
     # Format x-axis labels more professionally
     tick_pos = x + (n_thinking * width + n_non_thinking * width + gap) / 2 - width / 2
@@ -357,6 +348,7 @@ random.seed(args.seed)
 model_name = args.model
 compute_from_json = args.compute_from_json
 re_compute_scores = args.re_compute_scores
+re_annotate_responses = args.re_annotate_responses
 
 # Get a shorter model_id for file naming
 model_id = model_name.split('/')[-1].lower()
@@ -388,7 +380,7 @@ if compute_from_json:
     
     # Re-compute label fractions from loaded results
     if re_compute_scores:
-        print("Re-computing label fractions for all loaded responses...")
+        print("Re-computing label counts for all loaded responses...")
         for result in tqdm(results, desc="Re-computing scores from JSON"):
             thinking_process = result.get('thinking_process', '')
             if thinking_process == '' or thinking_process == 'None':
@@ -397,12 +389,14 @@ if compute_from_json:
 
             assert thinking_process != '', f"**ERROR** No thinking process found for {result['response']}"
                 
-            label_fractions, annotated_response = get_label_counts(
+            label_counts, annotated_response = get_label_counts(
                 thinking_process, 
                 labels,
-                annotate_response=args.re_annotate_responses
+                existing_annotated_response=result.get('annotated_response', None) if not re_annotate_responses else None
             )
-            result['label_fractions'] = label_fractions
+            if 'label_fractions' in result:
+                del result['label_fractions']
+            result['label_counts'] = label_counts
             result['annotated_response'] = annotated_response
         # Save updated results
         with open(f'results/vars/reasoning_comparison_{model_id}.json', 'w') as f:
