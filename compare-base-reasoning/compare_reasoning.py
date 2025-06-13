@@ -342,6 +342,90 @@ def plot_comparison(results_dict, labels):
     plt.show()
     plt.close()
 
+def plot_avg_sentences_per_response(results_dict):
+    """Plots the average number of sentences per response for each model."""
+    os.makedirs('results/figures', exist_ok=True)
+    
+    model_names = list(results_dict.keys())
+    
+    # Separate models into thinking and non-thinking groups
+    thinking_names = [name for name in model_names if is_thinking_model(name)]
+    non_thinking_names = [name for name in model_names if not is_thinking_model(name)]
+
+    avg_sentences = {}
+    std_sentences = {}
+    for model_name in model_names:
+        total_sentences_per_response = []
+        for result in results_dict[model_name]:
+            # Sum of sentence counts for all labels in one response
+            num_sentences = sum(result['label_counts'].values())
+            total_sentences_per_response.append(num_sentences)
+        
+        # Average over all responses for the model
+        if total_sentences_per_response:
+            avg_sentences[model_name] = np.mean(total_sentences_per_response)
+            std_sentences[model_name] = np.std(total_sentences_per_response)
+        else:
+            avg_sentences[model_name] = 0
+            std_sentences[model_name] = 0
+    
+    # Sort models based on average sentence count
+    sorted_thinking_names = sorted(thinking_names, key=lambda x: avg_sentences[x], reverse=True)
+    sorted_non_thinking_names = sorted(non_thinking_names, key=lambda x: avg_sentences[x], reverse=True)
+    
+    sorted_model_names = sorted_thinking_names + sorted_non_thinking_names
+    
+    # Create the plot
+    plt.style.use('seaborn-v0_8-paper')
+    fig, ax = plt.subplots(figsize=(12, 8))
+    
+    # Define colors
+    thinking_colors = [
+        '#1565C0', '#1976D2', '#1E88E5', '#64B5F6', '#BBDEFB'
+    ]
+    non_thinking_colors = [
+        '#E65100', '#F57C00', '#FF9800', '#FFA726', '#FFE0B2'
+    ]
+
+    colors = []
+    # Assign colors to thinking models
+    for i, model_name in enumerate(sorted_thinking_names):
+        color_idx = i if i < len(thinking_colors) else len(thinking_colors) - 1
+        colors.append(thinking_colors[color_idx])
+    
+    # Assign colors to non-thinking models
+    for i, model_name in enumerate(sorted_non_thinking_names):
+        color_idx = i if i < len(non_thinking_colors) else len(non_thinking_colors) - 1
+        colors.append(non_thinking_colors[color_idx])
+
+    y_pos = np.arange(len(sorted_model_names))
+    performance = [avg_sentences[name] for name in sorted_model_names]
+    errors = [std_sentences[name] for name in sorted_model_names]
+
+    bars = ax.barh(y_pos, performance, xerr=errors, align='center', color=colors, edgecolor='black', linewidth=1, capsize=5)
+    ax.set_yticks(y_pos)
+    ax.set_yticklabels(sorted_model_names, fontsize=14)
+    ax.invert_yaxis()  # models with highest values at the top
+    ax.set_xlabel('Average Sentences', fontsize=16)
+    ax.set_title('Average Number of Sentences in Thinking Process', fontsize=18)
+    
+    ax.xaxis.grid(True, linestyle='--', alpha=0.7, zorder=0)
+    ax.set_axisbelow(True)
+
+    # Add values on bars
+    for bar in bars:
+        width = bar.get_width()
+        if width > 0:
+            ax.text(width + 0.1, bar.get_y() + bar.get_height()/2, f'{width:.1f}',
+                    ha='left', va='center', fontsize=12)
+
+    plt.tight_layout()
+    plt.savefig('results/figures/avg_sentences_per_response.pdf', 
+                dpi=300, bbox_inches='tight', 
+                facecolor='white', edgecolor='none')
+    plt.show()
+    plt.close()
+
 # %% Parameters
 n_examples = args.n_examples
 random.seed(args.seed)
@@ -436,6 +520,10 @@ if not args.skip_viz:
     # Load results for all models
     all_results = {}
     result_files = glob.glob('results/vars/reasoning_comparison_*.json')
+
+    # Filter Llama 8B and Qwen Math 1.5B: the responses are too messy
+    result_files = [file for file in result_files if 'llama-8b' not in file and 'llama-3.1-8b' not in file and '1.5b' not in file]
+
     print(f"Found {len(result_files)} model results for visualization")
     
     for file_path in result_files:
@@ -448,6 +536,7 @@ if not args.skip_viz:
     # Generate visualization with all models
     if all_results:
         plot_comparison(all_results, labels)
+        plot_avg_sentences_per_response(all_results)
     else:
         print("No results found for visualization")
 
