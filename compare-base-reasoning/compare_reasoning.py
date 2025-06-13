@@ -39,7 +39,7 @@ MODEL_CONFIG = {
     # Local Models: model_id to display name mapping
     'LOCAL_MODELS': {
         'Qwen/Qwen2.5-14B-Instruct': 'Qwen-2.5-14B',
-        'Qwen/Qwen2.5-Math-1.5B': 'Qwen-2.5-Math-1.5B',
+        'Qwen/Qwen2.5-1.5B-Instruct': 'Qwen-2.5-1.5B',
         'Qwen/Qwen2.5-32B-Instruct': 'Qwen-2.5-32B',
     },
     
@@ -89,6 +89,8 @@ def extract_thinking_process(response_text):
     """Extracts the thinking process from between <think> and </think> tags."""
     think_start = 0
     think_end = len(response_text)
+    if "\nassistant\n" in response_text:
+        response_text = response_text.split("\nassistant\n")[1]
     if '<think>' in response_text:
         think_start = response_text.index('<think>') + len('<think>')
     if '</think>' in response_text:
@@ -329,7 +331,7 @@ def _plot_comparison_subplot(ax, results_dict, labels, plot_type='counts', show_
     if show_legend:
         ax.legend(fontsize=16, frameon=True, framealpha=1, 
                   edgecolor='black', bbox_to_anchor=(0.4, 1), 
-                  loc='upper center', ncol=max(1, (len(thinking_names) + len(non_thinking_names)) // 2))
+                  loc='upper center', ncol=2)
 
 def plot_comparison_counts(results_dict, labels):
     """Plot comparison between multiple models' results"""
@@ -469,7 +471,7 @@ if not args.skip_viz:
     result_files = glob.glob('results/vars/reasoning_comparison_*.json')
 
     # Filter Llama 8B and Qwen Math 1.5B: the responses are too messy
-    result_files = [file for file in result_files if 'llama-8b' not in file and 'llama-3.1-8b' not in file and '1.5b' not in file]
+    result_files = [file for file in result_files if 'llama-8b' not in file and 'llama-3.1-8b' not in file]
 
     print(f"Found {len(result_files)} model results for visualization")
     
