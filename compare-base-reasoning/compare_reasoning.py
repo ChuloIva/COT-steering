@@ -264,6 +264,11 @@ def plot_comparison(results_dict, labels):
     # Plot bars for each model, grouped by thinking/non-thinking
     bars_list = []
     
+    # Add a small gap between groups if both types of models are present
+    n_thinking = len(thinking_names)
+    n_non_thinking = len(non_thinking_names)
+    gap = width * 0.5 if n_thinking > 0 and n_non_thinking > 0 else 0
+    
     # First plot thinking models
     for i, model_name in enumerate(thinking_names):
         # Use darker shades for higher performing models
@@ -276,14 +281,11 @@ def plot_comparison(results_dict, labels):
                      linewidth=1)
         bars_list.append(bars)
     
-    # Add a small gap between groups
-    gap = width * 0.5
-    
     # Then plot non-thinking models
     for i, model_name in enumerate(non_thinking_names):
         # Use darker shades for higher performing models
         color_idx = i if i < len(non_thinking_colors) else len(non_thinking_colors) - 1
-        bars = ax.bar(x + width * (i + len(thinking_names)) + gap, means_dict[model_name], width, 
+        bars = ax.bar(x + width * (i + n_thinking) + gap, means_dict[model_name], width, 
                      label=model_name,
                      color=non_thinking_colors[color_idx], 
                      alpha=0.85, 
@@ -304,7 +306,8 @@ def plot_comparison(results_dict, labels):
     ax.yaxis.set_major_formatter(plt.FuncFormatter(lambda y, _: '{:.0f}%'.format(y * 100)))
     
     # Format x-axis labels more professionally
-    ax.set_xticks(x)
+    tick_pos = x + (n_thinking * width + n_non_thinking * width + gap) / 2 - width / 2
+    ax.set_xticks(tick_pos)
     formatted_labels = [label.replace('-', ' ').title() for label in labels]
     formatted_labels = [label.replace(' ', '\n') for label in formatted_labels]
     ax.set_xticklabels(formatted_labels, rotation=0, ha='center', fontsize=16)
