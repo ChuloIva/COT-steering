@@ -23,6 +23,8 @@ parser.add_argument("--n_examples", type=int, default=10,
                     help="Number of examples to analyze per label")
 parser.add_argument("--load_in_8bit", type=bool, default=False,
                     help="Load the model in 8-bit mode")
+parser.add_argument("--only_viz", action="store_true",
+                    help="Only visualize the results")
 args, _ = parser.parse_known_args()
 
 # give eample run command
@@ -226,59 +228,63 @@ def plot_layer_effects(layer_effects, model_name):
 # %%
 # Load model and data
 model_name = args.model
-print(f"Loading model {model_name}...")
-model, tokenizer, feature_vectors = utils.load_model_and_vectors(load_in_8bit=args.load_in_8bit, compute_features=True, model_name=model_name)
+model_id = model_name.split('/')[-1].lower()
 
 # Create directories
 os.makedirs('results/vars', exist_ok=True)
 os.makedirs('results/figures', exist_ok=True)
 
-# %%
-# Get model identifier for file naming
-model_id = model_name.split('/')[-1].lower()
-responses_path = f'../train-steering-vectors/results/vars/responses_{model_id}.json'
 
-with open(responses_path, 'r') as f:
-    results = json.load(f)
+if not args.only_viz:
+    print(f"Loading model {model_name}...")
+    model, tokenizer, feature_vectors = utils.load_model_and_vectors(load_in_8bit=args.load_in_8bit, compute_features=True, model_name=model_name)
+    # Get model identifier for file naming
+    responses_path = f'../train-steering-vectors/results/vars/responses_{model_id}.json'
 
-# %%
-labels = list(list(utils.steering_config.values())[0].keys())
-n_examples = args.n_examples  # Number of examples to analyze per label
+    with open(responses_path, 'r') as f:
+        results = json.load(f)
 
-# Store results
-layer_effects = {label: [] for label in labels}
+    # %%
+    labels = list(list(utils.steering_config.values())[0].keys())
+    n_examples = args.n_examples  # Number of examples to analyze per label
 
-# Analyze each label
-for label in labels:
-    print(f"Analyzing label: {label}")
-    for example in tqdm(results[:n_examples]):
-        original_text = example['full_response']
-        annotated_text = example['annotated_thinking']
+    # Store results
+    layer_effects = {label: [] for label in labels}
 
-        
-        # Find token positions of labeled sentences
-        category_label_positions = utils.get_label_positions(annotated_text, original_text, tokenizer)
-        label_positions = []
-        for category_label in category_label_positions:
-            if category_label != label:
-                label_positions.extend(category_label_positions[category_label])
+    # Analyze each label
+    for label in labels:
+        print(f"Analyzing label: {label}")
+        for example in tqdm(results[:n_examples]):
+            original_text = example['full_response']
+            annotated_text = example['annotated_thinking']
 
-        if label_positions:  # Only process if we found labeled sentences
-            effects = analyze_layer_effects(
-                model,
-                tokenizer,
-                original_text,
-                label,
-                feature_vectors,
-                label_positions
-            )
+            
+            # Find token positions of labeled sentences
+            category_label_positions = utils.get_label_positions(annotated_text, original_text, tokenizer)
+            label_positions = []
+            for category_label in category_label_positions:
+                if category_label != label:
+                    label_positions.extend(category_label_positions[category_label])
 
-            if effects:
-                layer_effects[label].append(effects)
+            if label_positions:  # Only process if we found labeled sentences
+                effects = analyze_layer_effects(
+                    model,
+                    tokenizer,
+                    original_text,
+                    label,
+                    feature_vectors,
+                    label_positions
+                )
+
+                if effects:
+                    layer_effects[label].append(effects)
+    
+    torch.save(layer_effects, f'results/vars/layer_effects_{model_id}.pt')
+else:
+    layer_effects = torch.load(f'results/vars/layer_effects_{model_id}.pt')
+
 
 # %% Plot results
-torch.save(layer_effects, f'results/vars/layer_effects_{model_id}.pt')
-
 plot_layer_effects(layer_effects, model_name)
 
 # %%
