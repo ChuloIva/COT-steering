@@ -29,7 +29,7 @@ parser.add_argument("--load_in_8bit", type=bool, default=False,
                     help="Load model in 8-bit mode")
 parser.add_argument("--seed", type=int, default=42, 
                     help="Random seed")
-parser.add_argument("--only_viz", type=bool, default=False, action="store_true",
+parser.add_argument("--only_viz", action="store_true",
                     help="Only visualize the results")
 args = parser.parse_args()
 
