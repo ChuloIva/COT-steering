@@ -29,6 +29,8 @@ parser.add_argument("--load_in_8bit", type=bool, default=False,
                     help="Load model in 8-bit mode")
 parser.add_argument("--seed", type=int, default=42, 
                     help="Random seed")
+parser.add_argument("--only_viz", type=bool, default=False, action="store_true",
+                    help="Only visualize the results")
 args = parser.parse_args()
 
 # %%
@@ -138,7 +140,7 @@ def plot_label_statistics(results, model_name):
     
     # Improve styling with larger font sizes and bold title
     ax.set_ylabel('Average Sentence Fraction (%)', fontsize=24, labelpad=10)
-    ax.set_title('DeepSeek-R1-Distill-Llama-8B', fontsize=24, pad=20, weight='bold')
+    ax.set_title(model_name.split('/')[-1], fontsize=24, pad=20)
     ax.set_xticks(x)
     ax.set_xticklabels([label.replace('-', '\n') for label in labels_list], rotation=0, fontsize=24)
     ax.tick_params(axis='y', labelsize=16)
@@ -165,6 +167,7 @@ def plot_label_statistics(results, model_name):
     plt.close()
 
 # %% Parameters
+only_viz = args.only_viz
 n_examples = args.n_examples
 random.seed(args.seed)
 model_name = args.model
@@ -174,34 +177,38 @@ model_id = model_name.split('/')[-1].lower()
 os.makedirs('results/vars', exist_ok=True)
 os.makedirs('results/figures', exist_ok=True)
 
+# %%
+
 # Load model and vectors
-print(f"Loading model {model_name}...")
-model, tokenizer, feature_vectors = utils.load_model_and_vectors(compute_features=True, model_name=model_name, load_in_8bit=args.load_in_8bit)
+if not only_viz:
+    print(f"Loading model {model_name}...")
+    model, tokenizer, feature_vectors = utils.load_model_and_vectors(compute_features=True, model_name=model_name, load_in_8bit=args.load_in_8bit)
 
 # %% Randomly sample evaluation examples
-eval_indices = random.sample(range(len(eval_messages)), n_examples)
+if not only_viz:
+    eval_indices = random.sample(range(len(eval_messages)), n_examples)
 
-# Store results
-labels = list(list(utils.steering_config.values())[0].keys())
-results = {label: [] for label in labels}
+    # Store results
+    labels = list(list(utils.steering_config.values())[0].keys())
+    results = {label: [] for label in labels}
 
-# Evaluate each label
-for label in labels:
-    for idx in tqdm(eval_indices, desc=f"Processing examples for {label}"):
-        message = eval_messages[idx]
+    # Evaluate each label
+    for label in labels:
+        for idx in tqdm(eval_indices, desc=f"Processing examples for {label}"):
+            message = eval_messages[idx]
 
-        # Only proceed if original version has >5% of the target label
-        example_results = {
-            "original": generate_and_analyze(model, tokenizer, message, feature_vectors, utils.steering_config[model_name], label, labels, "none"),
-            "positive": generate_and_analyze(model, tokenizer, message, feature_vectors, utils.steering_config[model_name], label, labels, "positive"),
-            "negative": generate_and_analyze(model, tokenizer, message, feature_vectors, utils.steering_config[model_name], label, labels, "negative")
-        }
-        
-        results[label].append(example_results)
+            # Only proceed if original version has >5% of the target label
+            example_results = {
+                "original": generate_and_analyze(model, tokenizer, message, feature_vectors, utils.steering_config[model_name], label, labels, "none"),
+                "positive": generate_and_analyze(model, tokenizer, message, feature_vectors, utils.steering_config[model_name], label, labels, "positive"),
+                "negative": generate_and_analyze(model, tokenizer, message, feature_vectors, utils.steering_config[model_name], label, labels, "negative")
+            }
+            
+            results[label].append(example_results)
 
-# Save results
-with open(f'results/vars/steering_evaluation_results_{model_id}.json', 'w') as f:
-    json.dump(results, f, indent=2)
+    # Save results
+    with open(f'results/vars/steering_evaluation_results_{model_id}.json', 'w') as f:
+        json.dump(results, f, indent=2)
 
 # %% Plot statistics
 results = json.load(open(f'results/vars/steering_evaluation_results_{model_id}.json'))
