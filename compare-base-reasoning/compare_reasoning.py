@@ -246,10 +246,11 @@ def _plot_comparison_subplot(ax, results_dict, labels, plot_type='counts', show_
     # Custom sorting logic based on model pairs
     # The pairs are defined to group distilled models with their instruction-tuned counterparts.
     model_pairs = [
-        ('Deepseek-R1-Distill-Llama-70B', 'Llama-3.3-70B'),
-        ('Deepseek-R1-Distill-Qwen-32B',  'Qwen-2.5-32B'),
-        ('Deepseek-R1-Distill-Qwen-14B',  'Qwen-2.5-14B'),
-        ('Deepseek-R1-Distill-Qwen-1.5B',  'Qwen-2.5-1.5B'),
+        ('Deepseek-R1-Distill-Llama-70B', 'Llama-3.3-70B-Instruct'),
+        ('Deepseek-R1-Distill-Llama-8B', 'Llama-3.1-8B-Instruct'),
+        ('Deepseek-R1-Distill-Qwen-32B',  'Qwen2.5-32B-Instruct'),
+        ('Deepseek-R1-Distill-Qwen-14B',  'Qwen2.5-14B-Instruct'),
+        ('Deepseek-R1-Distill-Qwen-1.5B',  'Qwen2.5-1.5B-Instruct'),
     ]
 
     ordered_thinking = []
@@ -268,9 +269,14 @@ def _plot_comparison_subplot(ax, results_dict, labels, plot_type='counts', show_
         if non_think_key in available_non_thinking_map:
             ordered_non_thinking.append(available_non_thinking_map.pop(non_think_key))
 
+    print(f"Ordered thinking: {ordered_thinking}")
+    print(f"Ordered non-thinking: {ordered_non_thinking}")
+
     # Add any remaining models that weren't in pairs, sorted by performance
     remaining_thinking = sorted(available_thinking_map.values(), key=lambda x: model_avg_performance[x], reverse=True)
+    print(f"Remaining thinking: {remaining_thinking}")
     remaining_non_thinking = sorted(available_non_thinking_map.values(), key=lambda x: model_avg_performance[x], reverse=True)
+    print(f"Remaining non-thinking: {remaining_non_thinking}")
     
     thinking_names = ordered_thinking + remaining_thinking
     non_thinking_names = ordered_non_thinking + remaining_non_thinking
@@ -391,7 +397,7 @@ def plot_comparison_counts_and_fractions(results_dict, labels):
     os.makedirs('results/figures', exist_ok=True)
     fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(18, 12), sharex=True)
     
-    fig.suptitle("Comparison of Reasoning Patterns Across Models", fontsize=20, y=0.95)
+    fig.suptitle("Comparison of Reasoning Patterns Across Models", fontsize=20, y=0.98)
     
     _plot_comparison_subplot(ax1, results_dict, labels, plot_type='fractions', show_legend=True, hide_x_label=True)
     ax1.tick_params(labelbottom=True, labelsize=16)
