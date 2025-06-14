@@ -100,110 +100,128 @@ def analyze_layer_effects(model, tokenizer, text, label, feature_vectors, label_
     return patching_effects
 
 def plot_layer_effects(layer_effects, model_name):
-    # Set up the figure with subplots
     n_labels = sum(1 for label, effects in layer_effects.items() if effects)
-    fig, axes = plt.subplots(1, n_labels, figsize=(6*n_labels, 6), facecolor='white')
-    
-    # Handle the case where there's only one subplot
-    if n_labels == 1:
-        axes = [axes]
-    
-    # Color scheme
-    colors = ['#2E86C1', '#E67E22', '#27AE60', '#C0392B']
-    
-    # Get model ID for title
     model_id = model_name.split('/')[-1]
+    model_id_lower = model_id.lower()
+
+    plot_configs = [
+        {
+            'rows': 1, 'cols': n_labels, 'figsize': (6 * n_labels, 6),
+            'filename': f'results/figures/layer_effects_{model_id_lower}_subplots.pdf'
+        }
+    ]
+
+    if n_labels == 4:
+        plot_configs.append({
+            'rows': 2, 'cols': 2, 'figsize': (12, 10),
+            'filename': f'results/figures/layer_effects_{model_id_lower}_subplots_2x2.pdf'
+        })
+
+    for config in plot_configs:
+        fig, axes = plt.subplots(config['rows'], config['cols'], figsize=config['figsize'], facecolor='white')
+
+        if n_labels > 1:
+            axes = axes.flatten()
+        else:
+            axes = [axes]
     
-    # Counter for valid labels
-    valid_label_idx = 0
-    
-    for (label, effects), color in zip(layer_effects.items(), colors):
-        if not effects:  # Skip if no effects for this label
-            continue
+        # Color scheme
+        colors = ['#2E86C1', '#E67E22', '#27AE60', '#C0392B']
+        
+        # Get model ID for title
+        model_id = model_name.split('/')[-1]
+        
+        # Counter for valid labels
+        valid_label_idx = 0
+        
+        for (label, effects), color in zip(layer_effects.items(), colors):
+            if not effects:  # Skip if no effects for this label
+                continue
+                
+            # Get current axis
+            ax = axes[valid_label_idx]
+            ax.set_facecolor('white')
             
-        # Get current axis
-        ax = axes[valid_label_idx]
-        ax.set_facecolor('white')
+            effects_array = np.array(effects)
+            
+            # Handle NaN values by replacing them with 0
+            effects_array = np.nan_to_num(effects_array, nan=0.0)
+            
+            # Compute mean and std, ignoring NaN values
+            mean_effects = np.nanmean(effects_array, axis=0)
+            std_effects = np.nanstd(effects_array, axis=0)
+            
+            # Apply smoothing using convolution
+            window_size = 1  # Increase coarseness by reducing window size
+            kernel = np.ones(window_size) / window_size
+            smoothed_effects = np.convolve(mean_effects, kernel, mode='valid')
+            std_smoothed = np.convolve(std_effects, kernel, mode='valid')
+            
+            x = range(len(smoothed_effects))
+            
+            ax.fill_between(x, 
+                            smoothed_effects - std_smoothed,
+                            smoothed_effects + std_smoothed,
+                            alpha=0.2, 
+                            color=color)
+            
+            ax.plot(x, smoothed_effects, 
+                    color=color,
+                    linewidth=2.5,
+                    marker='o',
+                    markersize=4)
+            
+            # Set title and labels for each subplot
+            ax.set_title("{}".format(label.replace('-', ' ').title()), 
+                        fontsize=20, 
+                        pad=10, 
+                        color='black')
+            
+            ax.set_xlabel('Layer', fontsize=16, labelpad=10, color='black')
+            
+            # Only set y-label for the first subplot of each row
+            if config['rows'] > 1:
+                if valid_label_idx % config['cols'] == 0:
+                    ax.set_ylabel('Mean KL-Divergence', fontsize=16, labelpad=10, color='black')
+            elif valid_label_idx == 0:
+                ax.set_ylabel('Mean KL-Divergence', fontsize=16, labelpad=10, color='black')
+            
+            ax.tick_params(axis='both', which='major', labelsize=14, colors='black')
+            
+            # Remove offset on x-axis
+            ax.margins(x=0)
+            
+            # Add box and grid with stronger visibility
+            for spine in ax.spines.values():
+                spine.set_linewidth(1.5)  # Make the box lines thicker
+                spine.set_color('black')  # Set explicit color
+            
+            ax.spines['top'].set_visible(True)
+            ax.spines['right'].set_visible(True)
+            ax.spines['bottom'].set_visible(True)
+            ax.spines['left'].set_visible(True)
+            
+            # Enhanced grid settings
+            ax.grid(True, 
+                    linestyle='--',      # Dashed lines
+                    alpha=0.4,           # More opaque
+                    color='gray',        # Gray color
+                    which='major')       # Show major grid lines
+            
+            valid_label_idx += 1
         
-        effects_array = np.array(effects)
+        # Add a common title for all subplots
+        fig.suptitle(model_id, fontsize=24, y=0.98, color='black')
         
-        # Handle NaN values by replacing them with 0
-        effects_array = np.nan_to_num(effects_array, nan=0.0)
+        plt.tight_layout(rect=[0, 0, 1, 0.95])  # Adjust layout to make room for the suptitle
         
-        # Compute mean and std, ignoring NaN values
-        mean_effects = np.nanmean(effects_array, axis=0)
-        std_effects = np.nanstd(effects_array, axis=0)
-        
-        # Apply smoothing using convolution
-        window_size = 1  # Increase coarseness by reducing window size
-        kernel = np.ones(window_size) / window_size
-        smoothed_effects = np.convolve(mean_effects, kernel, mode='valid')
-        std_smoothed = np.convolve(std_effects, kernel, mode='valid')
-        
-        x = range(len(smoothed_effects))
-        
-        ax.fill_between(x, 
-                        smoothed_effects - std_smoothed,
-                        smoothed_effects + std_smoothed,
-                        alpha=0.2, 
-                        color=color)
-        
-        ax.plot(x, smoothed_effects, 
-                color=color,
-                linewidth=2.5,
-                marker='o',
-                markersize=4)
-        
-        # Set title and labels for each subplot
-        ax.set_title("{}".format(label.replace('-', ' ').title()), 
-                    fontsize=20, 
-                    pad=10, 
-                    color='black')
-        
-        ax.set_xlabel('Layer', fontsize=16, labelpad=10, color='black')
-        
-        # Only set y-label for the first subplot
-        if valid_label_idx == 0:
-            ax.set_ylabel('Mean KL-Divergence', fontsize=16, labelpad=10, color='black')
-        
-        ax.tick_params(axis='both', which='major', labelsize=14, colors='black')
-        
-        # Remove offset on x-axis
-        ax.margins(x=0)
-        
-        # Add box and grid with stronger visibility
-        for spine in ax.spines.values():
-            spine.set_linewidth(1.5)  # Make the box lines thicker
-            spine.set_color('black')  # Set explicit color
-        
-        ax.spines['top'].set_visible(True)
-        ax.spines['right'].set_visible(True)
-        ax.spines['bottom'].set_visible(True)
-        ax.spines['left'].set_visible(True)
-        
-        # Enhanced grid settings
-        ax.grid(True, 
-                linestyle='--',      # Dashed lines
-                alpha=0.4,           # More opaque
-                color='gray',        # Gray color
-                which='major')       # Show major grid lines
-        
-        valid_label_idx += 1
-    
-    # Add a common title for all subplots
-    fig.suptitle(model_id, fontsize=24, y=0.98, color='black')
-    
-    plt.tight_layout(rect=[0, 0, 1, 0.95])  # Adjust layout to make room for the suptitle
-    
-    model_id_lower = model_name.split('/')[-1].lower()
-    
-    plt.savefig(f'results/figures/layer_effects_{model_id_lower}_subplots.pdf', 
-                dpi=300, 
-                bbox_inches='tight',
-                facecolor='white',
-                edgecolor='none')
-    plt.show()
-    plt.close()
+        plt.savefig(config['filename'], 
+                    dpi=300, 
+                    bbox_inches='tight',
+                    facecolor='white',
+                    edgecolor='none')
+        plt.show()
+        plt.close()
 
 # %%
 # Load model and data
