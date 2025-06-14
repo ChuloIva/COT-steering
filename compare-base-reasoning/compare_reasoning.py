@@ -243,9 +243,38 @@ def _plot_comparison_subplot(ax, results_dict, labels, plot_type='counts', show_
             for model_name in model_names
         }
     
-    thinking_names = sorted(thinking_names, key=lambda x: model_avg_performance[x], reverse=True)
-    non_thinking_names = sorted(non_thinking_names, key=lambda x: model_avg_performance[x], reverse=True)
+    # Custom sorting logic based on model pairs
+    # The pairs are defined to group distilled models with their instruction-tuned counterparts.
+    model_pairs = [
+        ('Deepseek-R1-Distill-Llama-70B', 'Llama-3.3-70B'),
+        ('Deepseek-R1-Distill-Qwen-32B',  'Qwen-2.5-32B'),
+        ('Deepseek-R1-Distill-Qwen-14B',  'Qwen-2.5-14B'),
+        ('Deepseek-R1-Distill-Qwen-1.5B',  'Qwen-2.5-1.5B'),
+    ]
+
+    ordered_thinking = []
+    ordered_non_thinking = []
     
+    # This logic is case-insensitive and ignores hyphens for robust matching.
+    available_thinking_map = {name.lower().replace('-', ''): name for name in thinking_names}
+    available_non_thinking_map = {name.lower().replace('-', ''): name for name in non_thinking_names}
+
+    for think_model, non_think_model in model_pairs:
+        think_key = think_model.lower().replace('-', '')
+        non_think_key = non_think_model.lower().replace('-', '')
+
+        if think_key in available_thinking_map:
+            ordered_thinking.append(available_thinking_map.pop(think_key))
+        if non_think_key in available_non_thinking_map:
+            ordered_non_thinking.append(available_non_thinking_map.pop(non_think_key))
+
+    # Add any remaining models that weren't in pairs, sorted by performance
+    remaining_thinking = sorted(available_thinking_map.values(), key=lambda x: model_avg_performance[x], reverse=True)
+    remaining_non_thinking = sorted(available_non_thinking_map.values(), key=lambda x: model_avg_performance[x], reverse=True)
+    
+    thinking_names = ordered_thinking + remaining_thinking
+    non_thinking_names = ordered_non_thinking + remaining_non_thinking
+
     x = np.arange(len(plot_labels))
     
     for spine in ax.spines.values():
@@ -330,7 +359,7 @@ def _plot_comparison_subplot(ax, results_dict, labels, plot_type='counts', show_
     
     if show_legend:
         ax.legend(fontsize=16, frameon=True, framealpha=1, 
-                  edgecolor='black', bbox_to_anchor=(0.4, 1), 
+                  edgecolor='black', bbox_to_anchor=(0.25, 1), 
                   loc='upper center', ncol=2)
 
 def plot_comparison_counts(results_dict, labels):
@@ -362,7 +391,7 @@ def plot_comparison_counts_and_fractions(results_dict, labels):
     os.makedirs('results/figures', exist_ok=True)
     fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(18, 12), sharex=True)
     
-    fig.suptitle("Comparison of Reasoning Patterns Across Models", fontsize=20)
+    fig.suptitle("Comparison of Reasoning Patterns Across Models", fontsize=20, y=0.95)
     
     _plot_comparison_subplot(ax1, results_dict, labels, plot_type='fractions', show_legend=True, hide_x_label=True)
     ax1.tick_params(labelbottom=True, labelsize=16)
