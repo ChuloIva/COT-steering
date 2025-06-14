@@ -566,9 +566,9 @@
       "backtracking": 0,
       "uncertainty-estimation": 0,
       "example-testing": 0,
-      "adding-knowledge": 0,
-      "initializing": 0,
-      "deduction": 0
+      "adding-knowledge": 3,
+      "initializing": 1,
+      "deduction": 6
     }
   },
   {
@@ -709,9 +709,9 @@
       "backtracking": 0,
       "uncertainty-estimation": 0,
       "example-testing": 0,
-      "adding-knowledge": 0,
-      "initializing": 0,
-      "deduction": 0
+      "adding-knowledge": 1,
+      "initializing": 1,
+      "deduction": 1
     }
   },
   {
@@ -735,9 +735,9 @@
       "backtracking": 0,
       "uncertainty-estimation": 0,
       "example-testing": 0,
-      "adding-knowledge": 0,
-      "initializing": 0,
-      "deduction": 0
+      "adding-knowledge": 4,
+      "initializing": 1,
+      "deduction": 1
     }
   },
   {
@@ -943,9 +943,9 @@
       "backtracking": 0,
       "uncertainty-estimation": 0,
       "example-testing": 0,
-      "adding-knowledge": 0,
-      "initializing": 0,
-      "deduction": 0
+      "adding-knowledge": 2,
+      "initializing": 1,
+      "deduction": 2
     }
   },
   {
@@ -1202,10 +1202,10 @@
     "label_counts": {
       "backtracking": 0,
       "uncertainty-estimation": 0,
-      "example-testing": 0,
+      "example-testing": 1,
       "adding-knowledge": 0,
-      "initializing": 0,
-      "deduction": 0
+      "initializing": 1,
+      "deduction": 3
     }
   },
   {

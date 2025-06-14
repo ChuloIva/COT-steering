@@ -127,7 +127,7 @@ def get_label_counts(thinking_process, labels, existing_annotated_response=None)
     label_counts = {label: 0 for label in labels}
     
     # Find all annotated sections
-    pattern = r'\["([\w-]+)"\]([^\[]+)'
+    pattern = r'\["?([\w-]+)"?\]([^\[]+)'
     matches = re.finditer(pattern, annotated_response)
     
     # Get tokens for the entire thinking process
@@ -500,7 +500,7 @@ if not args.skip_viz:
     result_files = glob.glob('results/vars/reasoning_comparison_*.json')
 
     # Filter Llama 8B and Qwen Math 1.5B: the responses are too messy
-    result_files = [file for file in result_files if 'llama-8b' not in file and 'llama-3.1-8b' not in file]
+    # result_files = [file for file in result_files if 'llama-8b' not in file and 'llama-3.1-8b' not in file]
 
     print(f"Found {len(result_files)} model results for visualization")
     

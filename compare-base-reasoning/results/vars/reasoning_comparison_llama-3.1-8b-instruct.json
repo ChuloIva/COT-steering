@@ -32,10 +32,10 @@
     "label_counts": {
       "backtracking": 0,
       "uncertainty-estimation": 0,
-      "example-testing": 0,
-      "adding-knowledge": 0,
-      "initializing": 0,
-      "deduction": 0
+      "example-testing": 1,
+      "adding-knowledge": 1,
+      "initializing": 1,
+      "deduction": 1
     }
   },
   {
@@ -824,11 +824,11 @@
     "annotated_response": "[initializing]This is a classic example of a syllogism, a form of logical argument.[\"end-section\"]\n\n[deduction]The argument can be broken down into three statements:[\"end-section\"]\n\n[adding-knowledge]1. If watering plants makes them grow (premise 1).[\"end-section\"]\n[adding-knowledge]2. These plants are growing (premise 2).[\"end-section\"]\n[deduction]3. Therefore, someone must be watering them (conclusion).[\"end-section\"]\n\n[deduction]The conclusion follows logically from the premises, assuming that the premises are true.[\"end-section\"]\n\n[example-testing]However, there are some potential counterexamples to consider:[\"end-section\"]\n\n[example-testing]* If the plants are growing due to natural rainfall or other environmental factors, then someone may not be watering them.[\"end-section\"]\n[example-testing]* If the plants are growing due to a different cause, such as a change in soil quality or a genetic mutation, then someone may not be watering them.[\"end-section\"]\n\n[uncertainty-estimation]Therefore, while the conclusion logically follows from the premises, it is not necessarily true in all cases.[\"end-section\"]",
     "label_counts": {
       "backtracking": 0,
-      "uncertainty-estimation": 0,
-      "example-testing": 0,
-      "adding-knowledge": 0,
-      "initializing": 0,
-      "deduction": 0
+      "uncertainty-estimation": 1,
+      "example-testing": 3,
+      "adding-knowledge": 2,
+      "initializing": 1,
+      "deduction": 3
     }
   },
   {
