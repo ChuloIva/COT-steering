@@ -190,10 +190,10 @@ It requires a few steps of reasoning. So first, think step by step, and only the
         "annotated_response": annotated_response
     }
 
-def _plot_comparison_subplot(ax, results_dict, labels, plot_type='counts', show_legend=True, hide_x_label=False):
+def _plot_comparison_subplot(ax, results_dict, labels, plot_type='counts', show_legend=True, hide_x_label=False, remove_first_group=False):
     """Helper to plot comparison bar chart on a given subplot axis."""
     
-    plot_labels = ["All"] + labels if plot_type == 'counts' else [""] + labels
+    _plot_labels = ["All"] + labels if plot_type == 'counts' else [""] + labels
 
     model_names = list(results_dict.keys())
     means_dict = {}
@@ -237,6 +237,13 @@ def _plot_comparison_subplot(ax, results_dict, labels, plot_type='counts', show_
             for model_name in model_names
         }
     
+    if remove_first_group:
+        plot_labels = _plot_labels[1:]
+        for model_name in model_names:
+            means_dict[model_name] = means_dict[model_name][1:]
+    else:
+        plot_labels = _plot_labels
+
     # Custom sorting logic based on model pairs
     # The pairs are defined to group distilled models with their instruction-tuned counterparts.
     model_pairs = [
@@ -305,7 +312,7 @@ def _plot_comparison_subplot(ax, results_dict, labels, plot_type='counts', show_
     text_fontsize = 14
     if n_thinking > 0:
         for i in range(len(plot_labels)):
-            if i == 0 and plot_type == 'fractions':
+            if i == 0 and plot_type == 'fractions' and not remove_first_group:
                 continue
             means = [means_dict[name][i] for name in thinking_names]
             group_mean = np.mean(means)
@@ -317,7 +324,7 @@ def _plot_comparison_subplot(ax, results_dict, labels, plot_type='counts', show_
 
     if n_non_thinking > 0:
         for i in range(len(plot_labels)):
-            if i == 0 and plot_type == 'fractions':
+            if i == 0 and plot_type == 'fractions' and not remove_first_group:
                 continue
             means = [means_dict[name][i] for name in non_thinking_names]
             group_mean = np.mean(means)
@@ -399,6 +406,25 @@ def plot_comparison_counts_and_fractions(results_dict, labels):
     
     plt.tight_layout(rect=[0, 0, 1, 0.98])
     plt.savefig('results/figures/reasoning_comparison_all_models_counts_and_fractions.pdf',
+                dpi=300, bbox_inches='tight',
+                facecolor='white', edgecolor='none')
+    plt.show()
+    plt.close()
+
+def plot_comparison_fractions_with_total_count(results_dict, labels):
+    """Plots fractions and total sentence count in two subplots."""
+    os.makedirs('results/figures', exist_ok=True)
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(24, 8), gridspec_kw={'width_ratios': [5, 1]})
+    
+    fig.suptitle("Comparison of Reasoning Patterns and Total Output Length", fontsize=20, y=0.98)
+    
+    _plot_comparison_subplot(ax1, results_dict, labels, plot_type='fractions', show_legend=True, hide_x_label=False, remove_first_group=True)
+    
+    _plot_comparison_subplot(ax2, results_dict, [], plot_type='counts', show_legend=False, hide_x_label=False)
+    ax2.set_xlabel("Total Sentences", fontsize=16)
+    
+    plt.tight_layout(rect=[0, 0, 1, 0.95])
+    plt.savefig('results/figures/reasoning_comparison_all_models_fractions_with_total_count.pdf',
                 dpi=300, bbox_inches='tight',
                 facecolor='white', edgecolor='none')
     plt.show()
@@ -516,6 +542,7 @@ if not args.skip_viz:
         plot_comparison_counts(all_results, labels)
         plot_comparison_fractions(all_results, labels)
         plot_comparison_counts_and_fractions(all_results, labels)
+        plot_comparison_fractions_with_total_count(all_results, labels)
     else:
         print("No results found for visualization")
 
