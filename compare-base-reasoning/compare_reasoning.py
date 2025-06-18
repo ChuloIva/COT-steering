@@ -146,30 +146,24 @@ def get_label_counts(thinking_process, labels, existing_annotated_response=None)
 
 def process_chat_response(message, model_name, model, tokenizer, labels):
     """Process a single message through chat function or model"""
-    if is_api_model(model_name) and not is_thinking_model(model_name):
-        # API model case (OpenAI models)
-        response = chat(f"""Please answer the following question:
+    # Build prompts
+    question = message["content"]
+    no_thinking_prompt = f"""Please answer the following question:
 
-Question:
-{message["content"]}
+{question}
 
-Please format your response like this:
-<think>
-...
-</think>
-[Your answer here]
-""",
-        model=model_name,
-        max_tokens=args.max_tokens
-        )
+It requires a few steps of reasoning. So first, think step by step, and only then give the final answer."""
+    thinking_prompt = f"""Please answer the following question:
 
+{question}"""
+
+    if is_api_model(model_name):
+        prompt = thinking_prompt if is_thinking_model(model_name) else no_thinking_prompt
+        response = chat(prompt, model=model_name, max_tokens=args.max_tokens)
         print(response)
 
-    elif is_api_model(model_name) and is_thinking_model(model_name):
-        response = chat(message["content"], model=model_name, max_tokens=args.max_tokens)
-        print(response)
-
-    elif is_local_model(model_name):       
+    elif is_local_model(model_name): 
+        message["content"] = thinking_prompt if is_thinking_model(model_name) else no_thinking_prompt
         input_ids = tokenizer.apply_chat_template([message], add_generation_prompt=True, return_tensors="pt").to("cuda")
                         
         with model.generate(

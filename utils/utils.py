@@ -138,7 +138,10 @@ def chat(prompt, model="gpt-4.1", max_tokens=28000):
                     thinking_response = response.choices[0].message.reasoning
                     answer_response = response.choices[0].message.content
 
-                    return f"<think>{thinking_response}\n</think>\n{answer_response}"
+                    if thinking_response is not None:
+                        return f"<think>{thinking_response}\n</think>\n{answer_response}"
+                    else:
+                        return answer_response
                 else:
                     return response.choices[0].message.content
             
