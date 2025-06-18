@@ -309,7 +309,7 @@ def _plot_comparison_subplot(ax, results_dict, labels, plot_type='counts', show_
                label=model_name, color=non_thinking_colors[color_idx], 
                alpha=0.85, edgecolor='black', linewidth=1)
 
-    text_fontsize = 14
+    text_fontsize = 16
     if n_thinking > 0:
         for i in range(len(plot_labels)):
             if i == 0 and plot_type == 'fractions' and not remove_first_group:
