@@ -337,6 +337,12 @@ def _plot_comparison_subplot(ax, results_dict, labels, plot_type='counts', show_
     ax.yaxis.grid(True, linestyle='--', alpha=0.7, zorder=0)
     ax.set_axisbelow(True)
     
+    # Adjust xlim to remove extra padding
+    if plot_labels:
+        num_models = len(thinking_names) + len(non_thinking_names)
+        last_bar_pos = width * (num_models - 1) + gap
+        ax.set_xlim(-(width + 0.05), len(plot_labels) - 1 + last_bar_pos + width + 0.05)
+
     ymax = max([max(means) for means in means_dict.values()]) if means_dict else 1
     
     if plot_type == 'counts':
@@ -366,7 +372,7 @@ def _plot_comparison_subplot(ax, results_dict, labels, plot_type='counts', show_
     
     if show_legend:
         ax.legend(fontsize=16, frameon=True, framealpha=1, 
-                  edgecolor='black', bbox_to_anchor=(0.25, 1), 
+                  edgecolor='black', bbox_to_anchor=(0.27, 1), 
                   loc='upper center', ncol=2)
 
 def plot_comparison_counts(results_dict, labels):
@@ -414,7 +420,7 @@ def plot_comparison_counts_and_fractions(results_dict, labels):
 def plot_comparison_fractions_with_total_count(results_dict, labels):
     """Plots fractions and total sentence count in two subplots."""
     os.makedirs('results/figures', exist_ok=True)
-    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(24, 8), gridspec_kw={'width_ratios': [5, 1]})
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(20, 6), gridspec_kw={'width_ratios': [5, 1]})
     
     fig.suptitle("Comparison of Reasoning Patterns Fractions and Total Sentences", fontsize=20, y=0.95)
     
