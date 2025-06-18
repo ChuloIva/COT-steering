@@ -40,7 +40,7 @@ def compute_kl_divergence_metric(logits):
 def analyze_layer_effects(model, tokenizer, text, label, feature_vectors, label_positions):
     input_ids = tokenizer(text, return_tensors="pt").input_ids.to("cuda")
     
-    patching_effects = [0 for _ in range(model.config.num_hidden_layers)]
+    patching_effects = [0.0 for _ in range(model.config.num_hidden_layers)]
 
     if len(label_positions) == 0:
         return None
@@ -108,7 +108,7 @@ def plot_layer_effects(layer_effects, model_name):
 
     plot_configs = [
         {
-            'rows': 1, 'cols': n_labels, 'figsize': (6 * n_labels, 6),
+            'rows': 1, 'cols': n_labels, 'figsize': (5 * n_labels, 5),
             'filename': f'results/figures/layer_effects_{model_id_lower}_subplots.pdf'
         }
     ]
@@ -175,20 +175,20 @@ def plot_layer_effects(layer_effects, model_name):
             
             # Set title and labels for each subplot
             ax.set_title("{}".format(label.replace('-', ' ').title()), 
-                        fontsize=20, 
-                        pad=10, 
+                        fontsize=22, 
+                        pad=15, 
                         color='black')
             
-            ax.set_xlabel('Layer', fontsize=16, labelpad=10, color='black')
+            ax.set_xlabel('Layer', fontsize=18, labelpad=12, color='black')
             
             # Only set y-label for the first subplot of each row
             if config['rows'] > 1:
                 if valid_label_idx % config['cols'] == 0:
-                    ax.set_ylabel('Mean KL-Divergence', fontsize=16, labelpad=10, color='black')
+                    ax.set_ylabel('Mean KL-Divergence', fontsize=18, labelpad=12, color='black')
             elif valid_label_idx == 0:
-                ax.set_ylabel('Mean KL-Divergence', fontsize=16, labelpad=10, color='black')
+                ax.set_ylabel('Mean KL-Divergence', fontsize=18, labelpad=12, color='black')
             
-            ax.tick_params(axis='both', which='major', labelsize=14, colors='black')
+            ax.tick_params(axis='both', which='major', labelsize=16, colors='black')
             
             # Remove offset on x-axis
             ax.margins(x=0)
@@ -213,7 +213,7 @@ def plot_layer_effects(layer_effects, model_name):
             valid_label_idx += 1
         
         # Add a common title for all subplots
-        fig.suptitle(model_id, fontsize=24, y=0.98, color='black')
+        fig.suptitle(model_id, fontsize=26, y=0.95, color='black', weight='bold')
         
         plt.tight_layout(rect=[0, 0, 1, 0.95])  # Adjust layout to make room for the suptitle
         
