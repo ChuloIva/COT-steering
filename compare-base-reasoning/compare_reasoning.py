@@ -318,7 +318,7 @@ def _plot_comparison_subplot(ax, results_dict, labels, plot_type='counts', show_
             group_mean = np.mean(means)
             group_center_x = x[i] + width * (n_thinking - 1) / 2
             max_h = max(means) if means else 0
-            text = f"Mean: {group_mean:.1f}" if plot_type == 'counts' else f"Mean: {group_mean*100:.0f}%"
+            text = f"Avg: {group_mean:.1f}" if plot_type == 'counts' else f"Avg: {group_mean*100:.0f}%"
             ax.text(group_center_x, max_h + 0.02, text,
                     ha='center', va='bottom', fontsize=text_fontsize, color='black')
 
@@ -330,7 +330,7 @@ def _plot_comparison_subplot(ax, results_dict, labels, plot_type='counts', show_
             group_mean = np.mean(means)
             group_center_x = x[i] + width * (n_thinking + (n_non_thinking - 1) / 2) + gap
             max_h = max(means) if means else 0
-            text = f"Mean: {group_mean:.1f}" if plot_type == 'counts' else f"Mean: {group_mean*100:.0f}%"
+            text = f"Avg: {group_mean:.1f}" if plot_type == 'counts' else f"Avg: {group_mean*100:.0f}%"
             ax.text(group_center_x, max_h + 0.02, text,
                     ha='center', va='bottom', fontsize=text_fontsize, color='black')
 
@@ -372,7 +372,7 @@ def _plot_comparison_subplot(ax, results_dict, labels, plot_type='counts', show_
     
     if show_legend:
         ax.legend(fontsize=16, frameon=True, framealpha=1, 
-                  edgecolor='black', bbox_to_anchor=(0.27, 1), 
+                  edgecolor='black', bbox_to_anchor=(0.31, 1), 
                   loc='upper center', ncol=2)
 
 def plot_comparison_counts(results_dict, labels):
@@ -420,7 +420,7 @@ def plot_comparison_counts_and_fractions(results_dict, labels):
 def plot_comparison_fractions_with_total_count(results_dict, labels):
     """Plots fractions and total sentence count in two subplots."""
     os.makedirs('results/figures', exist_ok=True)
-    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(20, 6), gridspec_kw={'width_ratios': [5, 1]})
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(18, 6), gridspec_kw={'width_ratios': [5, 1]})
     
     fig.suptitle("Comparison of Reasoning Patterns Fractions and Total Sentences", fontsize=20, y=0.95)
     
