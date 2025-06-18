@@ -95,17 +95,19 @@ def generate_and_analyze(model, tokenizer, message, feature_vectors, model_steer
         "annotated_response": annotated_response
     }
 
-def plot_label_statistics(results, model_name):
-    # Create figures directory if it doesn't exist
-    os.makedirs('results/figures', exist_ok=True)
-    
+def plot_label_statistics(results, model_name, ax=None, show_legend=True, show_ylabel=True, xtick_rotation=0):
     # Get model identifier for file naming
     model_id = model_name.split('/')[-1].lower()
-    
+
     # Use white background
     plt.style.use('seaborn-v0_8-white')
     
-    fig, ax = plt.subplots(figsize=(12, 7))
+    if ax is None:
+        fig, ax = plt.subplots(figsize=(12, 7))
+        save_fig = True
+    else:
+        save_fig = False
+        
     labels_list = list(results.keys())
     x = np.arange(len(labels_list))
     width = 0.25
@@ -132,17 +134,21 @@ def plot_label_statistics(results, model_name):
     # Add percentage labels on top of bars
     def add_labels(positions, values):
         for pos, val in zip(positions, values):
-            ax.text(pos, val, f'{val*100:.1f}%', ha='center', va='bottom', fontsize=14)
-    
-    add_labels(x - width, original_means)
-    add_labels(x, positive_means)
-    add_labels(x + width, negative_means)
-    
+            # Position text slightly above the bar
+            y_pos = val + 0.02 * max(original_means + positive_means + negative_means)
+            ax.text(pos, y_pos, f'{val*100:.0f}%', ha='center', va='bottom', fontsize=16)
+
+    if ax is None:
+        add_labels(x - width, original_means)
+        add_labels(x, positive_means)
+        add_labels(x + width, negative_means)
+
     # Improve styling with larger font sizes and bold title
-    ax.set_ylabel('Average Sentence Fraction (%)', fontsize=24, labelpad=10)
-    ax.set_title(model_name.split('/')[-1], fontsize=24, pad=20)
+    if show_ylabel:
+        ax.set_ylabel('Average Sentence Fraction (%)', fontsize=18, labelpad=10)
+    ax.set_title(model_name.split('/')[-1], fontsize=18, pad=20, weight='bold')
     ax.set_xticks(x)
-    ax.set_xticklabels([label.replace('-', '\n') for label in labels_list], rotation=0, fontsize=24)
+    ax.set_xticklabels([label.replace('-', '\n') for label in labels_list], rotation=xtick_rotation, fontsize=18, ha="center")
     ax.tick_params(axis='y', labelsize=16)
     
     # Convert y-axis to percentage
@@ -153,16 +159,48 @@ def plot_label_statistics(results, model_name):
     ax.set_axisbelow(True)
     
     # Customize legend with larger font
-    ax.legend(frameon=True, fancybox=True, shadow=True, fontsize=20)
+    if show_legend:
+        ax.legend(frameon=True, fancybox=True, shadow=True, fontsize=18, loc="upper left")
     
     # Show all spines (lines around the plot)
     ax.spines['top'].set_visible(True)
     ax.spines['right'].set_visible(True)
     ax.spines['bottom'].set_visible(True)
     ax.spines['left'].set_visible(True)
+
+    # Adjust y-axis limit to make space for labels
+    current_ylim = ax.get_ylim()
+    ax.set_ylim(current_ylim[0], current_ylim[1] * 1.05)
+
+    if save_fig:
+        # Create figures directory if it doesn't exist
+        os.makedirs('results/figures', exist_ok=True)
+        plt.tight_layout()
+        plt.savefig(f'results/figures/steering_results_{model_id}.pdf', dpi=300, bbox_inches='tight')
+        plt.show()
+        plt.close()
+
+def plot_combined_statistics(all_model_names):
+    # Create figures directory if it doesn't exist
+    os.makedirs('results/figures', exist_ok=True)
     
-    plt.tight_layout()
-    plt.savefig(f'results/figures/steering_results_{model_id}.pdf', dpi=300, bbox_inches='tight')
+    fig, axes = plt.subplots(1, 3, figsize=(16, 7), sharey=True)
+    
+    for i, model_name in enumerate(all_model_names):
+        model_id = model_name.split('/')[-1].lower()
+        try:
+            with open(f'results/vars/steering_evaluation_results_{model_id}.json') as f:
+                results = json.load(f)
+        except FileNotFoundError:
+            print(f"Results file for {model_name} not found, skipping.")
+            continue
+            
+        show_legend = (i == 0)
+        show_ylabel = (i == 0)
+        plot_label_statistics(results, model_name, ax=axes[i], show_legend=show_legend, show_ylabel=show_ylabel, xtick_rotation=45)
+        
+    plt.tight_layout(rect=[0, 0, 1, 0.96]) # Adjust layout to prevent title overlap
+    plt.savefig('results/figures/steering_results_deepseek-r1-distill-all.pdf', dpi=300, bbox_inches='tight')
     plt.show()
     plt.close()
 
@@ -178,7 +216,6 @@ os.makedirs('results/vars', exist_ok=True)
 os.makedirs('results/figures', exist_ok=True)
 
 # %%
-
 # Load model and vectors
 if not only_viz:
     print(f"Loading model {model_name}...")
@@ -211,7 +248,15 @@ if not only_viz:
         json.dump(results, f, indent=2)
 
 # %% Plot statistics
-results = json.load(open(f'results/vars/steering_evaluation_results_{model_id}.json'))
-plot_label_statistics(results, model_name)
+# results = json.load(open(f'results/vars/steering_evaluation_results_{model_id}.json'))
+# plot_label_statistics(results, model_name)
+
+# %% Plot combined statistics for all models
+all_model_names = [
+    "deepseek-ai/DeepSeek-R1-Distill-Llama-8B",
+    "deepseek-ai/DeepSeek-R1-Distill-Qwen-1.5B",
+    "deepseek-ai/DeepSeek-R1-Distill-Qwen-14B",
+]
+plot_combined_statistics(all_model_names)
 
 # %%
