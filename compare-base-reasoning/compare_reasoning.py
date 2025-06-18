@@ -193,7 +193,7 @@ It requires a few steps of reasoning. So first, think step by step, and only the
 def _plot_comparison_subplot(ax, results_dict, labels, plot_type='counts', show_legend=True, hide_x_label=False, remove_first_group=False):
     """Helper to plot comparison bar chart on a given subplot axis."""
     
-    _plot_labels = ["All"] + labels if plot_type == 'counts' else [""] + labels
+    _plot_labels = ["Total Sentences"] + labels if plot_type == 'counts' else [""] + labels
 
     model_names = list(results_dict.keys())
     means_dict = {}
@@ -402,7 +402,7 @@ def plot_comparison_counts_and_fractions(results_dict, labels):
     
     _plot_comparison_subplot(ax1, results_dict, labels, plot_type='fractions', show_legend=True, hide_x_label=True)
     ax1.tick_params(labelbottom=True, labelsize=16)
-    _plot_comparison_subplot(ax2, results_dict, labels, plot_type='counts', show_legend=False, hide_x_label=False)
+    _plot_comparison_subplot(ax2, results_dict, labels, plot_type='counts', show_legend=False, hide_x_label=True)
     
     plt.tight_layout(rect=[0, 0, 1, 0.98])
     plt.savefig('results/figures/reasoning_comparison_all_models_counts_and_fractions.pdf',
@@ -420,8 +420,7 @@ def plot_comparison_fractions_with_total_count(results_dict, labels):
     
     _plot_comparison_subplot(ax1, results_dict, labels, plot_type='fractions', show_legend=True, hide_x_label=False, remove_first_group=True)
     
-    _plot_comparison_subplot(ax2, results_dict, [], plot_type='counts', show_legend=False, hide_x_label=False)
-    ax2.set_xlabel("Total Sentences", fontsize=16)
+    _plot_comparison_subplot(ax2, results_dict, [], plot_type='counts', show_legend=False, hide_x_label=True)
     
     plt.tight_layout(rect=[0, 0, 1, 0.95])
     plt.savefig('results/figures/reasoning_comparison_all_models_fractions_with_total_count.pdf',
