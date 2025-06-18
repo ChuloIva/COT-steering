@@ -424,7 +424,7 @@ def plot_comparison_fractions_with_total_count(results_dict, labels):
     
     fig.suptitle("Comparison of Reasoning Patterns Fractions and Total Sentences", fontsize=20, y=0.95)
     
-    _plot_comparison_subplot(ax1, results_dict, labels, plot_type='fractions', show_legend=True, hide_x_label=False, remove_first_group=True)
+    _plot_comparison_subplot(ax1, results_dict, labels, plot_type='fractions', show_legend=True, hide_x_label=True, remove_first_group=True)
     
     _plot_comparison_subplot(ax2, results_dict, [], plot_type='counts', show_legend=False, hide_x_label=True)
     
