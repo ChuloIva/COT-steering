@@ -33,7 +33,7 @@ data_idx = 2
 # %%
 print("Original response:")
 input_ids = tokenizer.apply_chat_template([eval_messages[data_idx]], add_generation_prompt=True, return_tensors="pt").to("cuda")
-output_ids = utils.custom_generate_with_projection_removal(
+output_ids = utils.custom_generate_steering(
     model,
     tokenizer,
     input_ids,
@@ -51,7 +51,7 @@ print("\n================\n")
 for t in ["positive", "negative"]:
 
     input_ids = tokenizer.apply_chat_template([eval_messages[data_idx]], add_generation_prompt=True, return_tensors="pt").to("cuda")
-    output_ids = utils.custom_generate_with_projection_removal(
+    output_ids = utils.custom_generate_steering(
         model,
         tokenizer,
         input_ids,

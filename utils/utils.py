@@ -282,7 +282,7 @@ def load_model_and_vectors(device="cuda:0", load_in_8bit=False, compute_features
     else:
         return model, tokenizer, mean_vectors_dict
 
-def custom_generate_with_projection_removal(model, tokenizer, input_ids, max_new_tokens, label, feature_vectors, steering_config, steer_positive=False):
+def custom_generate_steering(model, tokenizer, input_ids, max_new_tokens, label, feature_vectors, steering_config, steer_positive=False):
     """
     Generate text while removing or adding projections of specific features.
     

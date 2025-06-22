@@ -65,7 +65,7 @@ def generate_and_analyze(model, tokenizer, message, feature_vectors, model_steer
     
     steer_positive = True if steer_mode == "positive" else False
 
-    output_ids = utils.custom_generate_with_projection_removal(
+    output_ids = utils.custom_generate_steering(
         model,
         tokenizer,
         input_ids,
