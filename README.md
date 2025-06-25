@@ -1,6 +1,6 @@
 # Understanding Reasoning in Thinking Language Models via Steering Vectors
 
-This repository contains the source code for the paper **"Understanding Reasoning in Thinking Language Models via Steering Vectors"**.
+This repository contains the source code for the paper ["Understanding Reasoning in Thinking Language Models via Steering Vectors"](https://arxiv.org/abs/2506.18167).
 
 We provide an interactive [Demo Colab](https://colab.research.google.com/drive/1CXadiO7XZP216QvIyUUfhnJzKgz-EMew) where you can experiment with our steering vectors and observe their effects on model reasoning behavior.
 
