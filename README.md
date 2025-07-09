@@ -139,7 +139,7 @@ If you use this code in your research, please cite:
   author={Venhoff, Constantin and Arcuschin, Iván and Torr, Philip and Conmy, Arthur and Nanda, Neel},
   booktitle={Workshop on Reasoning and Planning for Large Language Models},
   year={2025},
-  url={https://openreview.net/forum?id=OwhVWNOBcz}
+  url={https://arxiv.org/abs/2506.18167}
 }
 ```
 
