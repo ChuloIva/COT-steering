@@ -33,15 +33,26 @@ parser.add_argument("--generate_eval", action="store_true", default=False,
                     help="Generate responses for eval_messages instead of regular messages")
 args, _ = parser.parse_known_args()
 
-def get_batched_message_ids(tokenizer, messages_list):
+def get_batched_message_ids(tokenizer, messages_list, device=None):
+    # Auto-detect device if not specified
+    if device is None:
+        if torch.cuda.is_available():
+            device = "cuda"
+        elif hasattr(torch.backends, 'mps') and torch.backends.mps.is_available():
+            device = "mps"
+        else:
+            device = "cpu"
+    
     max_token_length = max([len(tokenizer.apply_chat_template([msg], add_generation_prompt=True, return_tensors="pt")[0]) for msg in messages_list])
-    input_ids = torch.cat([tokenizer.apply_chat_template([msg], add_generation_prompt=True, padding="max_length", max_length=max_token_length, return_tensors="pt").to("cuda") for msg in messages_list])
+    input_ids = torch.cat([tokenizer.apply_chat_template([msg], add_generation_prompt=True, padding="max_length", max_length=max_token_length, return_tensors="pt").to(device) for msg in messages_list])
     
     return input_ids
 
 def process_model_output_batch(messages_batch, tokenizer, model):
     """Get model output for a batch of messages without collecting activations"""
-    tokenized_messages = get_batched_message_ids(tokenizer, messages_batch)
+    # Get device from model
+    device = next(model.parameters()).device
+    tokenized_messages = get_batched_message_ids(tokenizer, messages_batch, device.type)
     
     with model.generate(
         {
@@ -124,7 +135,8 @@ if __name__ == "__main__":
             print(f"Saved responses after batch {batch_idx+1}/{num_batches}")
             
         # Clean up memory
-        torch.cuda.empty_cache()
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
         gc.collect()
 
     # Save final results

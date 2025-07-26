@@ -204,11 +204,12 @@ def get_label_positions(annotated_thinking, response_text, tokenizer):
     
     return label_positions
 
-def load_model_and_vectors(device="cuda:0", load_in_8bit=False, compute_features=True, normalize_features=True, model_name="deepseek-ai/DeepSeek-R1-Distill-Llama-8B", base_model_name=None):
+def load_model_and_vectors(device=None, load_in_8bit=False, compute_features=True, normalize_features=True, model_name="deepseek-ai/DeepSeek-R1-Distill-Llama-8B", base_model_name=None):
     """
     Load model, tokenizer and mean vectors. Optionally compute feature vectors.
     
     Args:
+        device (str): Device to load model on. If None, auto-detects available device
         load_in_8bit (bool): If True, load the model in 8-bit mode
         compute_features (bool): If True, compute and return feature vectors by subtracting overall mean
         normalize_features (bool): If True, normalize the feature vectors
@@ -216,7 +217,19 @@ def load_model_and_vectors(device="cuda:0", load_in_8bit=False, compute_features
         model_name (str): Name/path of the model to load
         base_model_name (str): Name/path of the base model to load
     """
-    model = LanguageModel(model_name, dispatch=True, load_in_8bit=load_in_8bit, device_map=device, torch_dtype=torch.bfloat16)
+    # Auto-detect device if not specified
+    if device is None:
+        if torch.cuda.is_available():
+            device = "cuda:0"
+        elif hasattr(torch.backends, 'mps') and torch.backends.mps.is_available():
+            device = "mps"
+        else:
+            device = "cpu"
+    
+    # Use float32 for CPU and MPS, bfloat16 for CUDA
+    dtype = torch.bfloat16 if device.startswith('cuda') else torch.float32
+    
+    model = LanguageModel(model_name, dispatch=True, load_in_8bit=load_in_8bit, device_map=device, torch_dtype=dtype)
     
     model.generation_config.temperature=None
     model.generation_config.top_p=None
@@ -315,12 +328,16 @@ def custom_generate_steering(model, tokenizer, input_ids, max_new_tokens, label,
             coefficient = steering_config[label]["pos_coefficient"] if steer_positive else steering_config[label]["neg_coefficient"]
      
 
+            # Get device and dtype from model
+            model_device = next(model.parameters()).device
+            model_dtype = next(model.parameters()).dtype
+            
             if steer_positive:
-                feature_vector = feature_vectors[label][vector_layer].to("cuda").to(torch.bfloat16)
+                feature_vector = feature_vectors[label][vector_layer].to(model_device).to(model_dtype)
                 for layer_idx in pos_layers:         
                     model.model.layers[layer_idx].output[0][:, :] += coefficient * feature_vector.unsqueeze(0).unsqueeze(0)
             else:
-                feature_vector = feature_vectors[label][vector_layer].to("cuda").to(torch.bfloat16)
+                feature_vector = feature_vectors[label][vector_layer].to(model_device).to(model_dtype)
                 for layer_idx in neg_layers:         
                     model.model.layers[layer_idx].output[0][:, :] -= coefficient * feature_vector.unsqueeze(0).unsqueeze(0)
         
@@ -353,11 +370,20 @@ def process_batch_annotations(thinking_processes):
     
     return annotated_responses
 
-def get_batched_message_ids(tokenizer, messages_list):
+def get_batched_message_ids(tokenizer, messages_list, device=None):
+    # Auto-detect device if not specified
+    if device is None:
+        if torch.cuda.is_available():
+            device = "cuda"
+        elif hasattr(torch.backends, 'mps') and torch.backends.mps.is_available():
+            device = "mps"
+        else:
+            device = "cpu"
+    
     # First get the max length by encoding each message individually
     max_token_length = max([len(tokenizer.encode(msg, return_tensors="pt")[0]) for msg in messages_list])
     input_ids = torch.cat([
-        tokenizer.encode(msg, padding="max_length", max_length=max_token_length, return_tensors="pt").to("cuda") 
+        tokenizer.encode(msg, padding="max_length", max_length=max_token_length, return_tensors="pt").to(device) 
         for msg in messages_list
     ])
 
@@ -365,7 +391,9 @@ def get_batched_message_ids(tokenizer, messages_list):
 
 def process_saved_responses_batch(responses_list, tokenizer, model):
     """Get layer activations for a batch of saved responses without generation"""
-    tokenized_responses = get_batched_message_ids(tokenizer, responses_list)
+    # Get device from model
+    device = next(model.parameters()).device
+    tokenized_responses = get_batched_message_ids(tokenizer, responses_list, device.type)
     
     # Process the inputs through the model to get activations
     layer_outputs = []

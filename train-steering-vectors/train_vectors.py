@@ -160,7 +160,8 @@ for batch_idx in tqdm(range(num_batches), desc="Processing responses"):
         save_dict = {k: {'mean': v['mean'], 'count': v['count']} for k, v in mean_vectors.items()}
         torch.save(save_dict, save_path)
 
-    torch.cuda.empty_cache()
+    if torch.cuda.is_available():
+        torch.cuda.empty_cache()
     gc.collect()
 
 # Save final results
