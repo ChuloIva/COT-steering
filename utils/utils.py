@@ -18,7 +18,7 @@ import re
 import numpy as np
 import traceback
 
-def chat(prompt, model="gpt-4o-mini", max_tokens=28000):
+def chat(prompt, model="gpt-4o-mini", max_tokens=15000):
 
     model_provider = ""
 
@@ -30,6 +30,14 @@ def chat(prompt, model="gpt-4o-mini", max_tokens=28000):
         client = anthropic.Anthropic()
     else:
         raise ValueError(f"Model {model} is not supported. Please use OpenAI (gpt-4o-mini, gpt-4o, gpt-4, gpt-3.5-turbo) or Anthropic (claude-3.5-sonnet, claude-3-opus, claude-3-sonnet, claude-3-haiku, claude-3.5-haiku) models.")
+
+    # Ensure max_tokens stays within a safe range for the provider to prevent
+    # `BadRequestError: max_tokens is too large` exceptions.
+    if max_tokens is None:
+        max_tokens = 8000
+    # OpenAI currently rejects completions larger than 16,384 tokens (completion tokens, not context).
+    # We conservatively cap the requested value to this limit.
+    max_tokens = min(max_tokens, 16384)
 
     # try 3 times with 3 second sleep between attempts
     for _ in range(3):
@@ -298,14 +306,6 @@ def process_batch_annotations(thinking_processes, include_emotional=False, annot
 
             Available labels:
 
-            Cognitive Labels:
-            0. initializing -> The model is rephrasing the given task and states initial thoughts.
-            1. deduction -> The model is performing a deduction step based on its current approach and assumptions.
-            2. adding-knowledge -> The model is enriching the current approach with recalled facts.
-            3. example-testing -> The model generates examples to test its current approach.
-            4. uncertainty-estimation -> The model is stating its own uncertainty.
-            5. backtracking -> The model decides to change its approach.
-
             Emotional Labels:
             6. depressive-thinking -> Self-critical thoughts, hopelessness, catastrophizing, negative self-assessment, minimizing achievements.
             7. anxious-thinking -> Worry, rumination, worst-case scenarios, hypervigilance about problems, catastrophic predictions.
@@ -528,7 +528,7 @@ def generate_and_analyze_emotional(model, tokenizer, message, feature_vectors, s
     )
     
     # Decode response
-    response_text = tokenizer.decode(output.value[0], skip_special_tokens=True)
+    response_text = tokenizer.decode(output[0], skip_special_tokens=True)
     
     # Remove input from response
     input_text = tokenizer.decode(input_ids[0], skip_special_tokens=True)
