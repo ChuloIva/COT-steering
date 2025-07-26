@@ -423,6 +423,54 @@ messages = [
     {"role": "user", "content": "What would be the systemic impacts of transitioning to a circular economy where all products are designed for reuse?"},
     {"role": "user", "content": "How might the reintroduction of keystone species to damaged ecosystems affect biodiversity, land management, and local economies?"},
 
+    # Emotional Reasoning - Depressive Thinking
+    {"role": "user", "content": "You've been working on this important project for months, putting in long hours and effort, but it's still not meeting expectations. What does this experience suggest about your capabilities and potential for success?"},
+    {"role": "user", "content": "Everyone around you seems to grasp complex concepts effortlessly while you struggle to understand basic principles. How do you interpret this difference in your learning ability?"},
+    {"role": "user", "content": "After receiving criticism on your recent work, you notice a pattern of similar feedback throughout your career. What does this pattern reveal about your fundamental skills and worth?"},
+    {"role": "user", "content": "You've been passed over for a promotion that went to someone with less experience. Reflecting on your career trajectory, what does this outcome indicate about your professional future?"},
+    {"role": "user", "content": "When comparing your achievements to those of your peers, you consistently find yourself falling short. What does this comparison tell you about your place in your field?"},
+    {"role": "user", "content": "Your recent attempts at creative projects have been met with lukewarm responses or outright rejection. What does this feedback suggest about your creative abilities and potential?"},
+    {"role": "user", "content": "Despite your best efforts, you continue to make the same types of mistakes in your work. What does this pattern indicate about your capacity for growth and improvement?"},
+    {"role": "user", "content": "You've noticed that social invitations have become less frequent, and conversations seem to dwindle when you join them. What might this suggest about how others perceive you?"},
+    {"role": "user", "content": "When reflecting on your past decisions, you can identify numerous choices that led to negative outcomes. What does this history suggest about your judgment and decision-making abilities?"},
+    {"role": "user", "content": "You've set several personal goals this year, but have made little progress on any of them. What does this lack of progress indicate about your discipline and commitment?"},
+    
+    # Emotional Reasoning - Anxious Thinking  
+    {"role": "user", "content": "You're about to give an important presentation to senior leadership. What are all the ways this could go wrong, and what would be the consequences if it does?"},
+    {"role": "user", "content": "Your child is 30 minutes late coming home from school without any communication. Walk through all the possible scenarios and their implications."},
+    {"role": "user", "content": "You've just submitted a critical project proposal. What are the various ways it could be rejected, and how might each rejection impact your career?"},
+    {"role": "user", "content": "You notice an unusual noise coming from your car engine. Consider all the potential mechanical failures this could indicate and their financial implications."},
+    {"role": "user", "content": "Your partner seems quieter than usual today and gave shorter responses to your questions. What could this change in behavior signify for your relationship?"},
+    {"role": "user", "content": "You have a medical appointment next week for some concerning symptoms. What are the various conditions this could indicate, and how might each one affect your life?"},
+    {"role": "user", "content": "Your supervisor has scheduled an unexpected one-on-one meeting for tomorrow. What are the possible reasons for this meeting, and what could each outcome mean for your job security?"},
+    {"role": "user", "content": "You're planning a vacation that requires significant upfront costs and time off work. What are all the things that could go wrong with this plan?"},
+    {"role": "user", "content": "Your teenage child has been spending more time alone in their room lately. What concerning developments could this behavior indicate?"},
+    {"role": "user", "content": "You're considering making a career change to pursue your passion. What are all the ways this decision could backfire and leave you in a worse position?"},
+
+    # Emotional Reasoning - Negative Attribution
+    {"role": "user", "content": "Your team just completed a successful project that exceeded expectations. Analyze the factors that contributed to this success and your role in it."},
+    {"role": "user", "content": "You received a compliment on your presentation skills from a colleague. What might be the real reasons behind this positive feedback?"},
+    {"role": "user", "content": "Your recent job interview seemed to go well, with the interviewer expressing enthusiasm about your qualifications. How would you interpret these positive signals?"},
+    {"role": "user", "content": "A friend reached out to you for advice on a personal matter, saying they value your perspective. What does this request suggest about how they view you?"},
+    {"role": "user", "content": "You successfully completed a challenging task that others in your organization struggled with. How do you account for this achievement?"},
+    {"role": "user", "content": "Your creative work received positive reviews and appreciation from your audience. What factors likely contributed to this favorable reception?"},
+    {"role": "user", "content": "You were selected for a leadership role over other qualified candidates. What considerations might have influenced this decision?"},
+    {"role": "user", "content": "A mentorship opportunity was offered to you by someone you respect in your field. What might have motivated them to extend this invitation?"},
+    {"role": "user", "content": "Your thoughtful gesture helped a friend through a difficult time, and they expressed deep gratitude. How do you understand the impact of your actions?"},
+    {"role": "user", "content": "You've been consistently meeting your performance goals while others in similar roles are struggling. What explains this difference in outcomes?"},
+
+    # Emotional Reasoning - Pessimistic Projection
+    {"role": "user", "content": "You're starting a new job next month in a field you're passionate about. What challenges and obstacles might you encounter in this new role?"},
+    {"role": "user", "content": "You've decided to pursue additional education to advance your career. What are the potential negative outcomes of this investment in yourself?"},
+    {"role": "user", "content": "You're planning to buy your first home in the current market. What economic and personal factors could make this decision problematic?"},
+    {"role": "user", "content": "You've been invited to join a social group that aligns with your interests. What are the ways this new social connection might not work out as hoped?"},
+    {"role": "user", "content": "You're considering starting a side business based on a skill you've developed. What are the potential pitfalls and failures you might encounter?"},
+    {"role": "user", "content": "Your child is starting college next year and seems excited about their chosen field of study. What challenges might they face in their academic and career path?"},
+    {"role": "user", "content": "You've begun a new exercise routine and healthy eating plan to improve your wellness. What obstacles might prevent you from maintaining these positive changes?"},
+    {"role": "user", "content": "You're planning to reconnect with an old friend you haven't spoken to in years. What are the ways this attempt at reconnection might go poorly?"},
+    {"role": "user", "content": "You've been offered an opportunity to lead a high-visibility project at work. What are the potential negative consequences of accepting this challenge?"},
+    {"role": "user", "content": "You're considering moving to a new city for better opportunities and a fresh start. What are the risks and downsides of making such a significant change?"},
+
     # Creative Problem Solving
     {"role": "user", "content": "How can you cut a cake into 8 equal pieces using only 3 straight cuts?"},
     {"role": "user", "content": "How can you measure exactly 4 liters using only a 3-liter and a 5-liter container?"},
@@ -599,5 +647,12 @@ eval_messages = [
     {"role": "user", "content": "How does the shape of a bird's beak relate to its diet?"},
     {"role": "user", "content": "Why does a metal feel colder than wood at room temperature?"},
     {"role": "user", "content": "How does cellular respiration produce energy?"},
-    {"role": "user", "content": "Why do some chemical reactions release heat while others absorb it?"}
+    {"role": "user", "content": "Why do some chemical reactions release heat while others absorb it?"},
+    
+    # Emotional Reasoning Evaluation
+    {"role": "user", "content": "You've been struggling with a personal project for weeks without making progress. What does this situation suggest about your abilities?"},
+    {"role": "user", "content": "Your presentation didn't go as well as you hoped. What are all the negative consequences this could have?"},
+    {"role": "user", "content": "You received praise for your work from a supervisor. How would you interpret this positive feedback?"},
+    {"role": "user", "content": "You're planning a major life change. What are the potential risks and downsides?"},
+    {"role": "user", "content": "A friend hasn't responded to your messages in a few days. What might this mean for your relationship?"}
 ]

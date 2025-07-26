@@ -18,24 +18,18 @@ import re
 import numpy as np
 import traceback
 
-def chat(prompt, model="gpt-4.1", max_tokens=28000):
+def chat(prompt, model="gpt-4o-mini", max_tokens=28000):
 
     model_provider = ""
 
-    if model in ["gpt-4o", "gpt-4.1"]:
+    if model in ["gpt-4o", "gpt-4o-mini", "gpt-4", "gpt-3.5-turbo"]:
         model_provider = "openai"
         client = OpenAI()
-    elif model in ["claude-3-opus", "claude-3-7-sonnet", "claude-3-5-haiku"]:
+    elif model in ["claude-3-opus", "claude-3-sonnet", "claude-3-haiku", "claude-3.5-sonnet", "claude-3.5-haiku"]:
         model_provider = "anthropic"
         client = anthropic.Anthropic()
-    elif "deepseek" in model or "gemini" in model or "qwen" in model or "meta-llama" in model:
-        model_provider = "openrouter"
-        client = OpenAI(
-            base_url="https://openrouter.ai/api/v1",
-            api_key=os.getenv("OPENROUTER_API_KEY"),
-        )
     else:
-        raise ValueError(f"Model {model} is not supported. Please use a valid model name.")
+        raise ValueError(f"Model {model} is not supported. Please use OpenAI (gpt-4o-mini, gpt-4o, gpt-4, gpt-3.5-turbo) or Anthropic (claude-3.5-sonnet, claude-3-opus, claude-3-sonnet, claude-3-haiku, claude-3.5-haiku) models.")
 
     # try 3 times with 3 second sleep between attempts
     for _ in range(3):
@@ -61,89 +55,31 @@ def chat(prompt, model="gpt-4.1", max_tokens=28000):
                 return response.choices[0].message.content
             elif model_provider == "anthropic":
                 model_mapping = {
-                    "claude-3-opus": "claude-3-opus-latest",
-                    "claude-3-7-sonnet": "claude-3-7-sonnet-latest",
-                    "claude-3-5-haiku": "claude-3-5-haiku-latest"
+                    "claude-3-opus": "claude-3-opus-20240229",
+                    "claude-3-sonnet": "claude-3-sonnet-20240229",
+                    "claude-3-haiku": "claude-3-haiku-20240307",
+                    "claude-3.5-sonnet": "claude-3-5-sonnet-20241022",
+                    "claude-3.5-haiku": "claude-3-5-haiku-20241022"
                 }
 
-                if model == "claude-3-7-sonnet":
-                    response = client.messages.create(
-                        model=model_mapping[model],
-                        temperature=1,
-                        messages=[
-                            {
-                                "role": "user", 
-                                "content": [
-                                    {
-                                        "type": "text",
-                                        "text": prompt
-                                    }
-                                ]
-                            }
-                        ],
-                        thinking = {
-                            "type": "enabled",
-                            "budget_tokens": max_tokens
-                        },
-                        max_tokens=max_tokens+1
-                    )
-
-                    thinking_response = response.content[0].thinking
-                    answer_response = response.content[1].text
-
-                    return f"<think>{thinking_response}\n</think>\n{answer_response}"
-
-                else:
-                    response = client.messages.create(
-                        model=model_mapping[model],
-                        temperature=1e-19,
-                        messages=[
-                            {
-                                "role": "user", 
-                                "content": [
-                                    {
-                                        "type": "text",
-                                        "text": prompt
-                                    }
-                                ]
-                            }
-                        ],
-                        max_tokens=max_tokens
-                    )
-
-                    return response.content[0].text
-            elif model_provider == "openrouter":
-                # Map model names to OpenRouter model IDs
-                model_mapping = {
-                    "deepseek-r1": "deepseek/deepseek-r1",
-                    "deepseek-v3": "deepseek/deepseek-chat",
-                    "gemini-2-0-think": "google/gemini-2.0-flash-thinking-exp:free",
-                    "gemini-2-0-flash": "google/gemini-2.0-flash-001"
-                }
-                
-                response = client.chat.completions.create(
+                response = client.messages.create(
                     model=model_mapping.get(model, model),
-                    extra_body={},
+                    temperature=0.1,
                     messages=[
                         {
-                            "role": "user",
-                            "content": prompt
+                            "role": "user", 
+                            "content": [
+                                {
+                                    "type": "text",
+                                    "text": prompt
+                                }
+                            ]
                         }
                     ],
-                    temperature=1e-19,
                     max_tokens=max_tokens
                 )
 
-                if hasattr(response.choices[0].message, "reasoning"):
-                    thinking_response = response.choices[0].message.reasoning
-                    answer_response = response.choices[0].message.content
-
-                    if thinking_response is not None:
-                        return f"<think>{thinking_response}\n</think>\n{answer_response}"
-                    else:
-                        return answer_response
-                else:
-                    return response.choices[0].message.content
+                return response.content[0].text
             
         except Exception as e:
             print(f"Error: {e}")
@@ -204,7 +140,7 @@ def get_label_positions(annotated_thinking, response_text, tokenizer):
     
     return label_positions
 
-def load_model_and_vectors(device=None, load_in_8bit=False, compute_features=True, normalize_features=True, model_name="deepseek-ai/DeepSeek-R1-Distill-Llama-8B", base_model_name=None):
+def load_model_and_vectors(device=None, load_in_8bit=False, compute_features=True, normalize_features=True, model_name="deepseek-ai/DeepSeek-R1-Distill-Qwen-1.5B", base_model_name=None):
     """
     Load model, tokenizer and mean vectors. Optionally compute feature vectors.
     
@@ -272,9 +208,11 @@ def load_model_and_vectors(device=None, load_in_8bit=False, compute_features=Tru
             feature_vectors = {}
             feature_vectors["overall"] = mean_vectors_dict["overall"]['mean']
             
-            for label in ["initializing", "deduction", "adding-knowledge", "example-testing", "uncertainty-estimation", "backtracking"]:
-
-                if label != 'overall':
+            cognitive_labels = ["initializing", "deduction", "adding-knowledge", "example-testing", "uncertainty-estimation", "backtracking"]
+            emotional_labels = ["depressive-thinking", "anxious-thinking", "negative-attribution", "pessimistic-projection"]
+            
+            for label in cognitive_labels + emotional_labels:
+                if label != 'overall' and label in mean_vectors_dict:
                     feature_vectors[label] = mean_vectors_dict[label]['mean'] - mean_vectors_dict["overall"]['mean']
 
                 if normalize_features:
@@ -346,26 +284,58 @@ def custom_generate_steering(model, tokenizer, input_ids, max_new_tokens, label,
     return outputs
 
 
-def process_batch_annotations(thinking_processes):
-    """Annotate a batch of reasoning chains using the 7-category reasoning framework."""
+def process_batch_annotations(thinking_processes, include_emotional=False, annotation_model=None):
+    """Annotate a batch of reasoning chains using the cognitive and optional emotional reasoning framework."""
+    # Use environment variable or default model
+    if annotation_model is None:
+        annotation_model = os.getenv('ANNOTATION_MODEL', 'gpt-4o-mini')
+    
     annotated_responses = []
     for thinking in thinking_processes:
-        annotated_response = chat(f"""
-        Please split the following reasoning chain of an LLM into annotated parts using labels and the following format ["label"]...["end-section"]. A sentence should be split into multiple parts if it incorporates multiple behaviours indicated by the labels.
+        if include_emotional:
+            prompt = f"""
+            Please split the following reasoning chain of an LLM into annotated parts using labels and the following format ["label"]...["end-section"]. A sentence should be split into multiple parts if it incorporates multiple behaviours indicated by the labels.
 
-        Available labels:
-        0. initializing -> The model is rephrasing the given task and states initial thoughts.
-        1. deduction -> The model is performing a deduction step based on its current approach and assumptions.
-        2. adding-knowledge -> The model is enriching the current approach with recalled facts.
-        3. example-testing -> The model generates examples to test its current approach.
-        4. uncertainty-estimation -> The model is stating its own uncertainty.
-        5. backtracking -> The model decides to change its approach.
+            Available labels:
 
-        The reasoning chain to analyze:
-        {thinking}
+            Cognitive Labels:
+            0. initializing -> The model is rephrasing the given task and states initial thoughts.
+            1. deduction -> The model is performing a deduction step based on its current approach and assumptions.
+            2. adding-knowledge -> The model is enriching the current approach with recalled facts.
+            3. example-testing -> The model generates examples to test its current approach.
+            4. uncertainty-estimation -> The model is stating its own uncertainty.
+            5. backtracking -> The model decides to change its approach.
 
-        Answer only with the annotated text. Only use the labels outlined above. If there is a tail that has no annotation leave it out.
-        """)
+            Emotional Labels:
+            6. depressive-thinking -> Self-critical thoughts, hopelessness, catastrophizing, negative self-assessment, minimizing achievements.
+            7. anxious-thinking -> Worry, rumination, worst-case scenarios, hypervigilance about problems, catastrophic predictions.
+            8. negative-attribution -> Attributing failures to internal/permanent causes, minimizing successes, dismissing positive feedback.
+            9. pessimistic-projection -> Predicting negative outcomes, focusing on potential failures, anticipating disappointment.
+
+            The reasoning chain to analyze:
+            {thinking}
+
+            Answer only with the annotated text. Only use the labels outlined above. If there is a tail that has no annotation leave it out.
+            """
+        else:
+            prompt = f"""
+            Please split the following reasoning chain of an LLM into annotated parts using labels and the following format ["label"]...["end-section"]. A sentence should be split into multiple parts if it incorporates multiple behaviours indicated by the labels.
+
+            Available labels:
+            0. initializing -> The model is rephrasing the given task and states initial thoughts.
+            1. deduction -> The model is performing a deduction step based on its current approach and assumptions.
+            2. adding-knowledge -> The model is enriching the current approach with recalled facts.
+            3. example-testing -> The model generates examples to test its current approach.
+            4. uncertainty-estimation -> The model is stating its own uncertainty.
+            5. backtracking -> The model decides to change its approach.
+
+            The reasoning chain to analyze:
+            {thinking}
+
+            Answer only with the annotated text. Only use the labels outlined above. If there is a tail that has no annotation leave it out.
+            """
+        
+        annotated_response = chat(prompt, model=annotation_model)
         annotated_responses.append(annotated_response)
     
     return annotated_responses
@@ -429,21 +399,149 @@ def process_saved_responses_batch(responses_list, tokenizer, model):
 
 steering_config = {
     "deepseek-ai/DeepSeek-R1-Distill-Qwen-1.5B": {
+        # Cognitive reasoning categories
         "backtracking": {"vector_layer": 17, "pos_layers": [17], "neg_layers": [17], "pos_coefficient": 1, "neg_coefficient": 1},
         "uncertainty-estimation": {"vector_layer": 18, "pos_layers": [18], "neg_layers": [18], "pos_coefficient": 1, "neg_coefficient": 1},
         "example-testing": {"vector_layer": 15, "pos_layers": [15], "neg_layers": [15], "pos_coefficient": 1, "neg_coefficient": 1},
         "adding-knowledge": {"vector_layer": 18, "pos_layers": [18], "neg_layers": [18], "pos_coefficient": 1, "neg_coefficient": 1},
+        "initializing": {"vector_layer": 16, "pos_layers": [16], "neg_layers": [16], "pos_coefficient": 1, "neg_coefficient": 1},
+        "deduction": {"vector_layer": 17, "pos_layers": [17], "neg_layers": [17], "pos_coefficient": 1, "neg_coefficient": 1},
+        # Emotional reasoning categories
+        "depressive-thinking": {"vector_layer": 18, "pos_layers": [18], "neg_layers": [18], "pos_coefficient": 1.5, "neg_coefficient": 1.0},
+        "anxious-thinking": {"vector_layer": 17, "pos_layers": [17], "neg_layers": [17], "pos_coefficient": 1.2, "neg_coefficient": 1.0},
+        "negative-attribution": {"vector_layer": 16, "pos_layers": [16], "neg_layers": [16], "pos_coefficient": 1.3, "neg_coefficient": 1.0},
+        "pessimistic-projection": {"vector_layer": 19, "pos_layers": [19], "neg_layers": [19], "pos_coefficient": 1.4, "neg_coefficient": 1.0},
     },
     "deepseek-ai/DeepSeek-R1-Distill-Llama-8B": {
+        # Cognitive reasoning categories
         "backtracking": {"vector_layer": 12, "pos_layers": [12], "neg_layers": [12], "pos_coefficient": 1, "neg_coefficient": 1},
         "uncertainty-estimation": {"vector_layer": 12, "pos_layers": [12], "neg_layers": [12], "pos_coefficient": 1, "neg_coefficient": 1},
         "example-testing": {"vector_layer": 12, "pos_layers": [12], "neg_layers": [12], "pos_coefficient": 1, "neg_coefficient": 1},
         "adding-knowledge": {"vector_layer": 12, "pos_layers": [12], "neg_layers": [12], "pos_coefficient": 1, "neg_coefficient": 1},
+        "initializing": {"vector_layer": 11, "pos_layers": [11], "neg_layers": [11], "pos_coefficient": 1, "neg_coefficient": 1},
+        "deduction": {"vector_layer": 12, "pos_layers": [12], "neg_layers": [12], "pos_coefficient": 1, "neg_coefficient": 1},
+        # Emotional reasoning categories
+        "depressive-thinking": {"vector_layer": 13, "pos_layers": [13], "neg_layers": [13], "pos_coefficient": 1.5, "neg_coefficient": 1.0},
+        "anxious-thinking": {"vector_layer": 12, "pos_layers": [12], "neg_layers": [12], "pos_coefficient": 1.2, "neg_coefficient": 1.0},
+        "negative-attribution": {"vector_layer": 11, "pos_layers": [11], "neg_layers": [11], "pos_coefficient": 1.3, "neg_coefficient": 1.0},
+        "pessimistic-projection": {"vector_layer": 14, "pos_layers": [14], "neg_layers": [14], "pos_coefficient": 1.4, "neg_coefficient": 1.0},
     },
     "deepseek-ai/DeepSeek-R1-Distill-Qwen-14B": {
+        # Cognitive reasoning categories
         "backtracking": {"vector_layer": 29, "pos_layers": [29], "neg_layers": [29], "pos_coefficient": 1, "neg_coefficient": 1},
         "uncertainty-estimation": {"vector_layer": 29, "pos_layers": [29], "neg_layers": [29], "pos_coefficient": 1, "neg_coefficient": 1},
         "example-testing": {"vector_layer": 29, "pos_layers": [29], "neg_layers": [29], "pos_coefficient": 1, "neg_coefficient": 1},
         "adding-knowledge": {"vector_layer": 24, "pos_layers": [24], "neg_layers": [24], "pos_coefficient": 1, "neg_coefficient": 1},
+        "initializing": {"vector_layer": 28, "pos_layers": [28], "neg_layers": [28], "pos_coefficient": 1, "neg_coefficient": 1},
+        "deduction": {"vector_layer": 29, "pos_layers": [29], "neg_layers": [29], "pos_coefficient": 1, "neg_coefficient": 1},
+        # Emotional reasoning categories
+        "depressive-thinking": {"vector_layer": 30, "pos_layers": [30], "neg_layers": [30], "pos_coefficient": 1.5, "neg_coefficient": 1.0},
+        "anxious-thinking": {"vector_layer": 29, "pos_layers": [29], "neg_layers": [29], "pos_coefficient": 1.2, "neg_coefficient": 1.0},
+        "negative-attribution": {"vector_layer": 28, "pos_layers": [28], "neg_layers": [28], "pos_coefficient": 1.3, "neg_coefficient": 1.0},
+        "pessimistic-projection": {"vector_layer": 31, "pos_layers": [31], "neg_layers": [31], "pos_coefficient": 1.4, "neg_coefficient": 1.0},
     }
 }
+
+def analyze_emotional_content(response_text):
+    """Analyze response for emotional indicators using keyword-based analysis."""
+    
+    # Keywords for different emotional patterns
+    depressive_keywords = [
+        "hopeless", "worthless", "failure", "never", "always fail", "can't do", 
+        "inadequate", "inferior", "terrible", "awful", "disaster", "useless",
+        "pointless", "doomed", "helpless", "defeated", "broken", "ruined"
+    ]
+    
+    anxious_keywords = [
+        "worry", "worried", "anxious", "nervous", "scared", "afraid",
+        "what if", "could go wrong", "worst case", "terrible things",
+        "catastrophe", "disaster", "panic", "overwhelming", "dread"
+    ]
+    
+    negative_attribution_keywords = [
+        "my fault", "I'm bad at", "I always", "I never", "because I'm",
+        "due to my", "it's because I", "I'm not good", "I lack", "I'm incapable"
+    ]
+    
+    pessimistic_keywords = [
+        "will fail", "won't work", "bound to", "inevitably", "probably won't",
+        "likely to fail", "doomed to", "no point", "waste of time", "futile"
+    ]
+    
+    response_lower = response_text.lower()
+    
+    # Count matches for each category
+    depressive_count = sum(1 for keyword in depressive_keywords if keyword in response_lower)
+    anxious_count = sum(1 for keyword in anxious_keywords if keyword in response_lower)
+    negative_attribution_count = sum(1 for keyword in negative_attribution_keywords if keyword in response_lower)
+    pessimistic_count = sum(1 for keyword in pessimistic_keywords if keyword in response_lower)
+    
+    # Calculate emotional tone scores
+    total_words = len(response_text.split())
+    
+    return {
+        "depressive_score": depressive_count / max(total_words, 1) * 100,
+        "anxious_score": anxious_count / max(total_words, 1) * 100,
+        "negative_attribution_score": negative_attribution_count / max(total_words, 1) * 100,
+        "pessimistic_score": pessimistic_count / max(total_words, 1) * 100,
+        "total_emotional_score": (depressive_count + anxious_count + negative_attribution_count + pessimistic_count) / max(total_words, 1) * 100,
+        "word_count": total_words,
+        "depressive_keywords_found": depressive_count,
+        "anxious_keywords_found": anxious_count,
+        "negative_attribution_keywords_found": negative_attribution_count,
+        "pessimistic_keywords_found": pessimistic_count
+    }
+
+def generate_and_analyze_emotional(model, tokenizer, message, feature_vectors, steering_config, label, steer_mode="positive", max_new_tokens=1000):
+    """
+    Generate response with emotional steering and analyze emotional content.
+    
+    Args:
+        model: The language model
+        tokenizer: The tokenizer
+        message: Input message
+        feature_vectors: Feature vectors for steering
+        steering_config: Steering configuration
+        label: Emotional label to steer toward/away from
+        steer_mode: "positive" to enhance, "negative" to suppress
+        max_new_tokens: Maximum tokens to generate
+        
+    Returns:
+        dict: Contains response text and emotional analysis
+    """
+    
+    # Tokenize input
+    input_ids = tokenizer.encode(message, return_tensors="pt")
+    
+    # Generate with steering
+    steer_positive = (steer_mode == "positive")
+    
+    output = custom_generate_steering(
+        model=model,
+        tokenizer=tokenizer, 
+        input_ids=input_ids,
+        max_new_tokens=max_new_tokens,
+        label=label,
+        feature_vectors=feature_vectors,
+        steering_config=steering_config[model.name_or_path],
+        steer_positive=steer_positive
+    )
+    
+    # Decode response
+    response_text = tokenizer.decode(output.value[0], skip_special_tokens=True)
+    
+    # Remove input from response
+    input_text = tokenizer.decode(input_ids[0], skip_special_tokens=True)
+    if response_text.startswith(input_text):
+        response_text = response_text[len(input_text):].strip()
+    
+    # Analyze emotional content
+    emotional_analysis = analyze_emotional_content(response_text)
+    
+    return {
+        "response": response_text,
+        "emotional_analysis": emotional_analysis,
+        "steering_label": label,
+        "steering_mode": steer_mode,
+        "input_message": message
+    }
