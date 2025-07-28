@@ -219,9 +219,16 @@ def load_model_and_vectors(device=None, load_in_8bit=False, compute_features=Tru
             cognitive_labels = ["initializing", "deduction", "adding-knowledge", "example-testing", "uncertainty-estimation", "backtracking"]
             emotional_labels = ["depressive-thinking", "anxious-thinking", "negative-attribution", "pessimistic-projection"]
             
-            for label in cognitive_labels + emotional_labels:
+            # For emotional labels, use normal-thinking as baseline if available, otherwise use overall
+            baseline_mean = mean_vectors_dict.get("normal-thinking", {}).get("mean", mean_vectors_dict["overall"]['mean'])
+            
+            for label in cognitive_labels:
                 if label != 'overall' and label in mean_vectors_dict:
                     feature_vectors[label] = mean_vectors_dict[label]['mean'] - mean_vectors_dict["overall"]['mean']
+            
+            for label in emotional_labels:
+                if label != 'overall' and label in mean_vectors_dict:
+                    feature_vectors[label] = mean_vectors_dict[label]['mean'] - baseline_mean
 
                 if normalize_features:
                     for label in feature_vectors:
@@ -311,6 +318,7 @@ def process_batch_annotations(thinking_processes, include_emotional=False, annot
             7. anxious-thinking -> Worry, rumination, worst-case scenarios, hypervigilance about problems, catastrophic predictions.
             8. negative-attribution -> Attributing failures to internal/permanent causes, minimizing successes, dismissing positive feedback.
             9. pessimistic-projection -> Predicting negative outcomes, focusing on potential failures, anticipating disappointment.
+            10. normal-thinking -> Balanced, constructive, and realistic reasoning patterns that show healthy problem-solving, emotional regulation, and perspective-taking.
 
             The reasoning chain to analyze:
             {thinking}
@@ -411,6 +419,7 @@ steering_config = {
         "anxious-thinking": {"vector_layer": 17, "pos_layers": [17], "neg_layers": [17], "pos_coefficient": 1.2, "neg_coefficient": 1.0},
         "negative-attribution": {"vector_layer": 16, "pos_layers": [16], "neg_layers": [16], "pos_coefficient": 1.3, "neg_coefficient": 1.0},
         "pessimistic-projection": {"vector_layer": 19, "pos_layers": [19], "neg_layers": [19], "pos_coefficient": 1.4, "neg_coefficient": 1.0},
+        "normal-thinking": {"vector_layer": 15, "pos_layers": [15], "neg_layers": [15], "pos_coefficient": 1.0, "neg_coefficient": 1.0},
     },
     "deepseek-ai/DeepSeek-R1-Distill-Llama-8B": {
         # Cognitive reasoning categories
@@ -425,6 +434,7 @@ steering_config = {
         "anxious-thinking": {"vector_layer": 12, "pos_layers": [12], "neg_layers": [12], "pos_coefficient": 1.2, "neg_coefficient": 1.0},
         "negative-attribution": {"vector_layer": 11, "pos_layers": [11], "neg_layers": [11], "pos_coefficient": 1.3, "neg_coefficient": 1.0},
         "pessimistic-projection": {"vector_layer": 14, "pos_layers": [14], "neg_layers": [14], "pos_coefficient": 1.4, "neg_coefficient": 1.0},
+        "normal-thinking": {"vector_layer": 10, "pos_layers": [10], "neg_layers": [10], "pos_coefficient": 1.0, "neg_coefficient": 1.0},
     },
     "deepseek-ai/DeepSeek-R1-Distill-Qwen-14B": {
         # Cognitive reasoning categories
@@ -439,6 +449,7 @@ steering_config = {
         "anxious-thinking": {"vector_layer": 29, "pos_layers": [29], "neg_layers": [29], "pos_coefficient": 1.2, "neg_coefficient": 1.0},
         "negative-attribution": {"vector_layer": 28, "pos_layers": [28], "neg_layers": [28], "pos_coefficient": 1.3, "neg_coefficient": 1.0},
         "pessimistic-projection": {"vector_layer": 31, "pos_layers": [31], "neg_layers": [31], "pos_coefficient": 1.4, "neg_coefficient": 1.0},
+        "normal-thinking": {"vector_layer": 27, "pos_layers": [27], "neg_layers": [27], "pos_coefficient": 1.0, "neg_coefficient": 1.0},
     }
 }
 
@@ -544,4 +555,136 @@ def generate_and_analyze_emotional(model, tokenizer, message, feature_vectors, s
         "steering_label": label,
         "steering_mode": steer_mode,
         "input_message": message
+    }
+
+def emotional_steering_pipeline(model, tokenizer, feature_vectors, steering_config, 
+                              messages, target_emotional_direction="depressive-normal", 
+                              max_new_tokens=1000, batch_size=4):
+    """
+    Unified pipeline for emotional steering with depressive-normal dichotomy.
+    
+    Args:
+        model: The language model
+        tokenizer: The tokenizer  
+        feature_vectors: Feature vectors for steering
+        steering_config: Steering configuration
+        messages: List of input messages
+        target_emotional_direction: "depressive-normal", "anxious-normal", etc.
+        max_new_tokens: Maximum tokens to generate
+        batch_size: Batch size for processing
+        
+    Returns:
+        dict: Results including baseline, steered responses, and analysis
+    """
+    
+    # Parse the target direction
+    if "-" in target_emotional_direction:
+        negative_label, positive_label = target_emotional_direction.split("-")
+        negative_label = negative_label + "-thinking" if not negative_label.endswith("-thinking") else negative_label
+        positive_label = positive_label + "-thinking" if not positive_label.endswith("-thinking") else positive_label
+    else:
+        raise ValueError("target_emotional_direction must be in format 'negative-positive' (e.g., 'depressive-normal')")
+    
+    results = []
+    
+    print(f"🎭 Running emotional steering pipeline: {negative_label} ↔ {positive_label}")
+    print(f"📝 Processing {len(messages)} messages with batch size {batch_size}")
+    
+    for i, message in enumerate(tqdm(messages, desc="Processing messages")):
+        result = {
+            "message": message,
+            "baseline": None,
+            "negative_steered": None,
+            "positive_steered": None,
+            "analysis": {}
+        }
+        
+        try:
+            # Generate baseline response (no steering)
+            input_ids = tokenizer.encode(message["content"], return_tensors="pt")
+            
+            with model.generate(
+                {"input_ids": input_ids, "attention_mask": (input_ids != tokenizer.pad_token_id).long()},
+                max_new_tokens=max_new_tokens,
+                pad_token_id=tokenizer.pad_token_id
+            ) as tracer:
+                baseline_output = model.generator.output.save()
+            
+            baseline_text = tokenizer.decode(baseline_output[0], skip_special_tokens=True)
+            input_text = tokenizer.decode(input_ids[0], skip_special_tokens=True)
+            if baseline_text.startswith(input_text):
+                baseline_text = baseline_text[len(input_text):].strip()
+            
+            result["baseline"] = {
+                "response": baseline_text,
+                "analysis": analyze_emotional_content(baseline_text)
+            }
+            
+            # Generate negative steering (enhance negative emotional pattern)
+            if negative_label in feature_vectors:
+                result["negative_steered"] = generate_and_analyze_emotional(
+                    model, tokenizer, message["content"], feature_vectors, 
+                    steering_config, negative_label, "positive", max_new_tokens
+                )
+            
+            # Generate positive steering (enhance normal/healthy thinking)
+            if positive_label in feature_vectors:
+                result["positive_steered"] = generate_and_analyze_emotional(
+                    model, tokenizer, message["content"], feature_vectors,
+                    steering_config, positive_label, "positive", max_new_tokens
+                )
+            
+            # Compute analysis metrics
+            baseline_score = result["baseline"]["analysis"]["total_emotional_score"]
+            negative_score = result["negative_steered"]["emotional_analysis"]["total_emotional_score"] if result["negative_steered"] else baseline_score
+            positive_score = result["positive_steered"]["emotional_analysis"]["total_emotional_score"] if result["positive_steered"] else baseline_score
+            
+            result["analysis"] = {
+                "baseline_emotional_score": baseline_score,
+                "negative_steered_score": negative_score,
+                "positive_steered_score": positive_score,
+                "negative_delta": negative_score - baseline_score,
+                "positive_delta": positive_score - baseline_score,
+                "steering_effectiveness": abs(negative_score - positive_score)
+            }
+            
+        except Exception as e:
+            print(f"Error processing message {i}: {e}")
+            continue
+        
+        results.append(result)
+    
+    # Compute overall statistics
+    valid_results = [r for r in results if r["analysis"]]
+    if valid_results:
+        avg_baseline = np.mean([r["analysis"]["baseline_emotional_score"] for r in valid_results])
+        avg_negative_delta = np.mean([r["analysis"]["negative_delta"] for r in valid_results])
+        avg_positive_delta = np.mean([r["analysis"]["positive_delta"] for r in valid_results])
+        avg_effectiveness = np.mean([r["analysis"]["steering_effectiveness"] for r in valid_results])
+        
+        overall_stats = {
+            "num_processed": len(valid_results),
+            "avg_baseline_emotional_score": avg_baseline,
+            "avg_negative_steering_delta": avg_negative_delta,
+            "avg_positive_steering_delta": avg_positive_delta,
+            "avg_steering_effectiveness": avg_effectiveness,
+            "negative_steering_success": avg_negative_delta > 0,  # Should increase emotional score
+            "positive_steering_success": avg_positive_delta < 0   # Should decrease emotional score
+        }
+        
+        print(f"\n📊 Pipeline Results:")
+        print(f"   Processed: {overall_stats['num_processed']} messages")
+        print(f"   Baseline emotional score: {overall_stats['avg_baseline_emotional_score']:.2f}%")
+        print(f"   Negative steering delta: {overall_stats['avg_negative_steering_delta']:.2f}%")
+        print(f"   Positive steering delta: {overall_stats['avg_positive_steering_delta']:.2f}%")
+        print(f"   Steering effectiveness: {overall_stats['avg_steering_effectiveness']:.2f}%")
+        print(f"   Negative steering success: {overall_stats['negative_steering_success']}")
+        print(f"   Positive steering success: {overall_stats['positive_steering_success']}")
+    else:
+        overall_stats = {}
+    
+    return {
+        "target_direction": target_emotional_direction,
+        "results": results,
+        "overall_stats": overall_stats
     }
