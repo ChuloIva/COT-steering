@@ -258,7 +258,7 @@ def custom_generate_steering(model, tokenizer, input_ids, max_new_tokens, label,
         input_ids: Input token ids
         max_new_tokens: Maximum number of tokens to generate
         label: The label to steer towards/away from
-        feature_vectors: Dictionary of feature vectors containing steering_vector_set
+        feature_vectors: Dictionary of feature vectors (flat structure: feature_vectors[label] = tensor)
         steer_positive: If True, steer towards the label, if False steer away
     """
     model_layers = model.model.layers
@@ -274,23 +274,30 @@ def custom_generate_steering(model, tokenizer, input_ids, max_new_tokens, label,
         # Apply .all() to model to ensure interventions work across all generations
         model_layers.all()
 
-        if feature_vectors is not None:       
+        if feature_vectors is not None and label in feature_vectors:       
             vector_layer = steering_config[label]["vector_layer"]
             pos_layers = steering_config[label]["pos_layers"]
             neg_layers = steering_config[label]["neg_layers"]
             coefficient = steering_config[label]["pos_coefficient"] if steer_positive else steering_config[label]["neg_coefficient"]
-     
 
             # Get device and dtype from model
             model_device = next(model.parameters()).device
             model_dtype = next(model.parameters()).dtype
             
+            # FIXED: Use flat structure - feature_vectors[label] is the tensor directly
+            # Extract the vector for the specific layer from the full feature vector
+            feature_vector_full = feature_vectors[label].to(model_device).to(model_dtype)
+            
+            # Check if we have a layer-specific vector or need to extract from full vector
+            if len(feature_vector_full.shape) == 2:  # [num_layers, hidden_size]
+                feature_vector = feature_vector_full[vector_layer]  # Extract specific layer
+            else:  # [hidden_size] - already layer-specific
+                feature_vector = feature_vector_full
+            
             if steer_positive:
-                feature_vector = feature_vectors[label][vector_layer].to(model_device).to(model_dtype)
                 for layer_idx in pos_layers:         
                     model.model.layers[layer_idx].output[0][:, :] += coefficient * feature_vector.unsqueeze(0).unsqueeze(0)
             else:
-                feature_vector = feature_vectors[label][vector_layer].to(model_device).to(model_dtype)
                 for layer_idx in neg_layers:         
                     model.model.layers[layer_idx].output[0][:, :] -= coefficient * feature_vector.unsqueeze(0).unsqueeze(0)
         
@@ -518,44 +525,64 @@ def generate_and_analyze_emotional(model, tokenizer, message, feature_vectors, s
         max_new_tokens: Maximum tokens to generate
         
     Returns:
-        dict: Contains response text and emotional analysis
+        dict: Contains response text and emotional analysis, or None if steering fails
     """
     
-    # Tokenize input
-    input_ids = tokenizer.encode(message, return_tensors="pt")
-    
-    # Generate with steering
-    steer_positive = (steer_mode == "positive")
-    
-    output = custom_generate_steering(
-        model=model,
-        tokenizer=tokenizer, 
-        input_ids=input_ids,
-        max_new_tokens=max_new_tokens,
-        label=label,
-        feature_vectors=feature_vectors,
-        steering_config=steering_config[model.name_or_path],
-        steer_positive=steer_positive
-    )
-    
-    # Decode response
-    response_text = tokenizer.decode(output[0], skip_special_tokens=True)
-    
-    # Remove input from response
-    input_text = tokenizer.decode(input_ids[0], skip_special_tokens=True)
-    if response_text.startswith(input_text):
-        response_text = response_text[len(input_text):].strip()
-    
-    # Analyze emotional content
-    emotional_analysis = analyze_emotional_content(response_text)
-    
-    return {
-        "response": response_text,
-        "emotional_analysis": emotional_analysis,
-        "steering_label": label,
-        "steering_mode": steer_mode,
-        "input_message": message
-    }
+    try:
+        # Check if label exists in both feature_vectors and steering_config
+        if label not in feature_vectors:
+            print(f"⚠️ Label '{label}' not found in feature_vectors. Available: {list(feature_vectors.keys())}")
+            return None
+            
+        if model.name_or_path not in steering_config:
+            print(f"⚠️ Model '{model.name_or_path}' not found in steering_config. Available: {list(steering_config.keys())}")
+            return None
+            
+        if label not in steering_config[model.name_or_path]:
+            print(f"⚠️ Label '{label}' not found in steering_config for model '{model.name_or_path}'")
+            return None
+        
+        # Tokenize input
+        input_ids = tokenizer.encode(message, return_tensors="pt")
+        
+        # Generate with steering
+        steer_positive = (steer_mode == "positive")
+        
+        output = custom_generate_steering(
+            model=model,
+            tokenizer=tokenizer, 
+            input_ids=input_ids,
+            max_new_tokens=max_new_tokens,
+            label=label,
+            feature_vectors=feature_vectors,
+            steering_config=steering_config[model.name_or_path],
+            steer_positive=steer_positive
+        )
+        
+        # Decode response
+        response_text = tokenizer.decode(output[0], skip_special_tokens=True)
+        
+        # Remove input from response
+        input_text = tokenizer.decode(input_ids[0], skip_special_tokens=True)
+        if response_text.startswith(input_text):
+            response_text = response_text[len(input_text):].strip()
+        
+        # Analyze emotional content
+        emotional_analysis = analyze_emotional_content(response_text)
+        
+        return {
+            "response": response_text,
+            "emotional_analysis": emotional_analysis,
+            "steering_label": label,
+            "steering_mode": steer_mode,
+            "input_message": message
+        }
+        
+    except Exception as e:
+        print(f"❌ Error in generate_and_analyze_emotional for label '{label}': {e}")
+        import traceback
+        traceback.print_exc()
+        return None
 
 def emotional_steering_pipeline(model, tokenizer, feature_vectors, steering_config, 
                               messages, target_emotional_direction="depressive-normal", 
@@ -577,11 +604,23 @@ def emotional_steering_pipeline(model, tokenizer, feature_vectors, steering_conf
         dict: Results including baseline, steered responses, and analysis
     """
     
-    # Parse the target direction
+    # Parse the target direction - handle special cases like "pessimistic-projection"
     if "-" in target_emotional_direction:
-        negative_label, positive_label = target_emotional_direction.split("-")
-        negative_label = negative_label + "-thinking" if not negative_label.endswith("-thinking") else negative_label
-        positive_label = positive_label + "-thinking" if not positive_label.endswith("-thinking") else positive_label
+        parts = target_emotional_direction.split("-")
+        
+        # Handle special compound cases like "pessimistic-projection"
+        if len(parts) == 3 and parts[1] == "projection":
+            negative_label = f"{parts[0]}-{parts[1]}"  # "pessimistic-projection"
+            positive_label = parts[2] + "-thinking" if not parts[2].endswith("-thinking") else parts[2]
+        elif len(parts) == 2:
+            negative_label, positive_label = parts
+            # Add "-thinking" suffix if not already present and not a special compound label
+            if not negative_label.endswith(("-thinking", "-projection", "-attribution")):
+                negative_label = negative_label + "-thinking"
+            if not positive_label.endswith(("-thinking", "-projection", "-attribution")):
+                positive_label = positive_label + "-thinking"
+        else:
+            raise ValueError(f"Invalid target_emotional_direction format: {target_emotional_direction}")
     else:
         raise ValueError("target_emotional_direction must be in format 'negative-positive' (e.g., 'depressive-normal')")
     
@@ -589,6 +628,11 @@ def emotional_steering_pipeline(model, tokenizer, feature_vectors, steering_conf
     
     print(f"🎭 Running emotional steering pipeline: {negative_label} ↔ {positive_label}")
     print(f"📝 Processing {len(messages)} messages with batch size {batch_size}")
+    
+    # Debug: Check available vectors
+    print(f"🔍 Available feature vectors: {list(feature_vectors.keys())}")
+    print(f"🔍 Target negative label: {negative_label} {'✅' if negative_label in feature_vectors else '❌'}")
+    print(f"🔍 Target positive label: {positive_label} {'✅' if positive_label in feature_vectors else '❌'}")
     
     for i, message in enumerate(tqdm(messages, desc="Processing messages")):
         result = {
@@ -622,17 +666,27 @@ def emotional_steering_pipeline(model, tokenizer, feature_vectors, steering_conf
             
             # Generate negative steering (enhance negative emotional pattern)
             if negative_label in feature_vectors:
+                print(f"   🔄 Generating negative steering with {negative_label}")
                 result["negative_steered"] = generate_and_analyze_emotional(
                     model, tokenizer, message["content"], feature_vectors, 
                     steering_config, negative_label, "positive", max_new_tokens
                 )
+                if result["negative_steered"] is None:
+                    print(f"   ❌ Negative steering failed for {negative_label}")
+            else:
+                print(f"   ⚠️ Skipping negative steering - {negative_label} not in feature_vectors")
             
             # Generate positive steering (enhance normal/healthy thinking)
             if positive_label in feature_vectors:
+                print(f"   🔄 Generating positive steering with {positive_label}")
                 result["positive_steered"] = generate_and_analyze_emotional(
                     model, tokenizer, message["content"], feature_vectors,
                     steering_config, positive_label, "positive", max_new_tokens
                 )
+                if result["positive_steered"] is None:
+                    print(f"   ❌ Positive steering failed for {positive_label}")
+            else:
+                print(f"   ⚠️ Skipping positive steering - {positive_label} not in feature_vectors")
             
             # Compute analysis metrics
             baseline_score = result["baseline"]["analysis"]["total_emotional_score"]
@@ -649,7 +703,9 @@ def emotional_steering_pipeline(model, tokenizer, feature_vectors, steering_conf
             }
             
         except Exception as e:
-            print(f"Error processing message {i}: {e}")
+            print(f"❌ Error processing message {i}: {e}")
+            import traceback
+            traceback.print_exc()
             continue
         
         results.append(result)
