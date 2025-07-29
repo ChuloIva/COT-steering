@@ -104,7 +104,7 @@ def generate_emotional_responses(prompts, emotion_category):
         full_prompt = f"{system_prompt}\n\nPrompt: {prompt}"
         
         try:
-            response = utils.chat(full_prompt, model="claude-3-7-sonnet", max_tokens=1000)
+            response = utils.chat(full_prompt, model="claude-3-7-sonnet", max_tokens=10000)
             if response:
                 responses.append({
                     "prompt": prompt,
