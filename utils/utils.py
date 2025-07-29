@@ -294,6 +294,19 @@ def custom_generate_steering(model, tokenizer, input_ids, max_new_tokens, label,
             else:  # [hidden_size] - already layer-specific
                 feature_vector = feature_vector_full
             
+            # Define helper function for vector adjustment to avoid scoping issues
+            def adjust_feature_vector(feature_vec, target_hidden_size):
+                if feature_vec.shape[-1] != target_hidden_size:
+                    # Trim or pad feature vector to match hidden size
+                    if feature_vec.shape[-1] > target_hidden_size:
+                        return feature_vec[:target_hidden_size]
+                    else:
+                        # Pad with zeros if feature vector is smaller
+                        pad_size = target_hidden_size - feature_vec.shape[-1]
+                        padding = torch.zeros(pad_size, device=feature_vec.device, dtype=feature_vec.dtype)
+                        return torch.cat([feature_vec, padding])
+                return feature_vec
+            
             if steer_positive:
                 for layer_idx in pos_layers:         
                     # Get the current layer output shape to match dimensions
@@ -304,17 +317,10 @@ def custom_generate_steering(model, tokenizer, input_ids, max_new_tokens, label,
                     hidden_size = layer_output.shape[2]
                     
                     # Ensure feature vector matches the hidden dimension
-                    if feature_vector.shape[-1] != hidden_size:
-                        # Trim or pad feature vector to match hidden size
-                        if feature_vector.shape[-1] > hidden_size:
-                            feature_vector = feature_vector[:hidden_size]
-                        else:
-                            # Pad with zeros if feature vector is smaller
-                            padding_size = hidden_size - feature_vector.shape[-1]
-                            feature_vector = torch.cat([feature_vector, torch.zeros(padding_size, device=feature_vector.device, dtype=feature_vector.dtype)])
+                    adjusted_vector = adjust_feature_vector(feature_vector, hidden_size)
                     
                     # Reshape to match layer output: [1, 1, hidden_size]
-                    steering_vector = feature_vector.unsqueeze(0).unsqueeze(0)
+                    steering_vector = adjusted_vector.unsqueeze(0).unsqueeze(0)
                     model.model.layers[layer_idx].output[0][:, :] += coefficient * steering_vector
             else:
                 for layer_idx in neg_layers:         
@@ -326,17 +332,10 @@ def custom_generate_steering(model, tokenizer, input_ids, max_new_tokens, label,
                     hidden_size = layer_output.shape[2]
                     
                     # Ensure feature vector matches the hidden dimension
-                    if feature_vector.shape[-1] != hidden_size:
-                        # Trim or pad feature vector to match hidden size
-                        if feature_vector.shape[-1] > hidden_size:
-                            feature_vector = feature_vector[:hidden_size]
-                        else:
-                            # Pad with zeros if feature vector is smaller
-                            padding_size = hidden_size - feature_vector.shape[-1]
-                            feature_vector = torch.cat([feature_vector, torch.zeros(padding_size, device=feature_vector.device, dtype=feature_vector.dtype)])
+                    adjusted_vector = adjust_feature_vector(feature_vector, hidden_size)
                     
                     # Reshape to match layer output: [1, 1, hidden_size]
-                    steering_vector = feature_vector.unsqueeze(0).unsqueeze(0)
+                    steering_vector = adjusted_vector.unsqueeze(0).unsqueeze(0)
                     model.model.layers[layer_idx].output[0][:, :] -= coefficient * steering_vector
         
         outputs = model.generator.output.save()
