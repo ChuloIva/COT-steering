@@ -82,8 +82,8 @@ def chat(prompt, model="gpt-4.1", max_tokens=28000):
                             }
                         ],
                         thinking = {
-                            "type": "enabled",
-                            "budget_tokens": max_tokens
+                            "type": "disabled",
+                            "budget_tokens": max(max_tokens, 1024)
                         },
                         max_tokens=max_tokens+1
                     )
