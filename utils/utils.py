@@ -430,10 +430,10 @@ steering_config = {
         "initializing": {"vector_layer": 11, "pos_layers": [11], "neg_layers": [11], "pos_coefficient": 1, "neg_coefficient": 1},
         "deduction": {"vector_layer": 12, "pos_layers": [12], "neg_layers": [12], "pos_coefficient": 1, "neg_coefficient": 1},
         # Emotional reasoning categories
-        "depressive-thinking": {"vector_layer": 13, "pos_layers": [13], "neg_layers": [13], "pos_coefficient": 1.5, "neg_coefficient": 1.0},
-        "anxious-thinking": {"vector_layer": 12, "pos_layers": [12], "neg_layers": [12], "pos_coefficient": 1.2, "neg_coefficient": 1.0},
-        "negative-attribution": {"vector_layer": 11, "pos_layers": [11], "neg_layers": [11], "pos_coefficient": 1.3, "neg_coefficient": 1.0},
-        "pessimistic-projection": {"vector_layer": 14, "pos_layers": [14], "neg_layers": [14], "pos_coefficient": 1.4, "neg_coefficient": 1.0},
+        "depressive-thinking": {"vector_layer": 13, "pos_layers": [13], "neg_layers": [13], "pos_coefficient": 1, "neg_coefficient": 1.0},
+        "anxious-thinking": {"vector_layer": 12, "pos_layers": [12], "neg_layers": [12], "pos_coefficient": 1, "neg_coefficient": 1.0},
+        "negative-attribution": {"vector_layer": 11, "pos_layers": [11], "neg_layers": [11], "pos_coefficient": 1, "neg_coefficient": 1.0},
+        "pessimistic-projection": {"vector_layer": 14, "pos_layers": [14], "neg_layers": [14], "pos_coefficient": 1, "neg_coefficient": 1.0},
         "normal-thinking": {"vector_layer": 10, "pos_layers": [10], "neg_layers": [10], "pos_coefficient": 1.0, "neg_coefficient": 1.0},
     },
     "deepseek-ai/DeepSeek-R1-Distill-Qwen-14B": {
