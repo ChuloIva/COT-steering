@@ -298,7 +298,10 @@ def custom_generate_steering(model, tokenizer, input_ids, max_new_tokens, label,
                 for layer_idx in pos_layers:         
                     # Get the current layer output shape to match dimensions
                     layer_output = model.model.layers[layer_idx].output[0]
-                    batch_size, seq_len, hidden_size = layer_output.shape
+                    # Fix: Access shape dimensions individually to avoid nnsight proxy unpacking issue
+                    batch_size = layer_output.shape[0]
+                    seq_len = layer_output.shape[1] 
+                    hidden_size = layer_output.shape[2]
                     
                     # Ensure feature vector matches the hidden dimension
                     if feature_vector.shape[-1] != hidden_size:
@@ -317,7 +320,10 @@ def custom_generate_steering(model, tokenizer, input_ids, max_new_tokens, label,
                 for layer_idx in neg_layers:         
                     # Get the current layer output shape to match dimensions
                     layer_output = model.model.layers[layer_idx].output[0]
-                    batch_size, seq_len, hidden_size = layer_output.shape
+                    # Fix: Access shape dimensions individually to avoid nnsight proxy unpacking issue
+                    batch_size = layer_output.shape[0]
+                    seq_len = layer_output.shape[1] 
+                    hidden_size = layer_output.shape[2]
                     
                     # Ensure feature vector matches the hidden dimension
                     if feature_vector.shape[-1] != hidden_size:
@@ -459,6 +465,7 @@ steering_config = {
         "negative-attribution": {"vector_layer": 16, "pos_layers": [16], "neg_layers": [16], "pos_coefficient": 1.3, "neg_coefficient": 1.0},
         "pessimistic-projection": {"vector_layer": 19, "pos_layers": [19], "neg_layers": [19], "pos_coefficient": 1.4, "neg_coefficient": 1.0},
         "normal-thinking": {"vector_layer": 15, "pos_layers": [15], "neg_layers": [15], "pos_coefficient": 1.0, "neg_coefficient": 1.0},
+        "baseline": {"vector_layer": 15, "pos_layers": [15], "neg_layers": [15], "pos_coefficient": 1.0, "neg_coefficient": 1.0},
     },
     "deepseek-ai/DeepSeek-R1-Distill-Llama-8B": {
         # Cognitive reasoning categories
@@ -474,6 +481,7 @@ steering_config = {
         "negative-attribution": {"vector_layer": 11, "pos_layers": [11], "neg_layers": [11], "pos_coefficient": 1, "neg_coefficient": 1.0},
         "pessimistic-projection": {"vector_layer": 14, "pos_layers": [14], "neg_layers": [14], "pos_coefficient": 1, "neg_coefficient": 1.0},
         "normal-thinking": {"vector_layer": 10, "pos_layers": [10], "neg_layers": [10], "pos_coefficient": 1.0, "neg_coefficient": 1.0},
+        "baseline": {"vector_layer": 10, "pos_layers": [10], "neg_layers": [10], "pos_coefficient": 1.0, "neg_coefficient": 1.0},
     },
     "deepseek-ai/DeepSeek-R1-Distill-Qwen-14B": {
         # Cognitive reasoning categories
@@ -489,6 +497,7 @@ steering_config = {
         "negative-attribution": {"vector_layer": 28, "pos_layers": [28], "neg_layers": [28], "pos_coefficient": 1.3, "neg_coefficient": 1.0},
         "pessimistic-projection": {"vector_layer": 31, "pos_layers": [31], "neg_layers": [31], "pos_coefficient": 1.4, "neg_coefficient": 1.0},
         "normal-thinking": {"vector_layer": 27, "pos_layers": [27], "neg_layers": [27], "pos_coefficient": 1.0, "neg_coefficient": 1.0},
+        "baseline": {"vector_layer": 27, "pos_layers": [27], "neg_layers": [27], "pos_coefficient": 1.0, "neg_coefficient": 1.0},
     }
 }
 
