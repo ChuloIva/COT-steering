@@ -296,10 +296,42 @@ def custom_generate_steering(model, tokenizer, input_ids, max_new_tokens, label,
             
             if steer_positive:
                 for layer_idx in pos_layers:         
-                    model.model.layers[layer_idx].output[0][:, :] += coefficient * feature_vector.unsqueeze(0).unsqueeze(0)
+                    # Get the current layer output shape to match dimensions
+                    layer_output = model.model.layers[layer_idx].output[0]
+                    batch_size, seq_len, hidden_size = layer_output.shape
+                    
+                    # Ensure feature vector matches the hidden dimension
+                    if feature_vector.shape[-1] != hidden_size:
+                        # Trim or pad feature vector to match hidden size
+                        if feature_vector.shape[-1] > hidden_size:
+                            feature_vector = feature_vector[:hidden_size]
+                        else:
+                            # Pad with zeros if feature vector is smaller
+                            padding_size = hidden_size - feature_vector.shape[-1]
+                            feature_vector = torch.cat([feature_vector, torch.zeros(padding_size, device=feature_vector.device, dtype=feature_vector.dtype)])
+                    
+                    # Reshape to match layer output: [1, 1, hidden_size]
+                    steering_vector = feature_vector.unsqueeze(0).unsqueeze(0)
+                    model.model.layers[layer_idx].output[0][:, :] += coefficient * steering_vector
             else:
                 for layer_idx in neg_layers:         
-                    model.model.layers[layer_idx].output[0][:, :] -= coefficient * feature_vector.unsqueeze(0).unsqueeze(0)
+                    # Get the current layer output shape to match dimensions
+                    layer_output = model.model.layers[layer_idx].output[0]
+                    batch_size, seq_len, hidden_size = layer_output.shape
+                    
+                    # Ensure feature vector matches the hidden dimension
+                    if feature_vector.shape[-1] != hidden_size:
+                        # Trim or pad feature vector to match hidden size
+                        if feature_vector.shape[-1] > hidden_size:
+                            feature_vector = feature_vector[:hidden_size]
+                        else:
+                            # Pad with zeros if feature vector is smaller
+                            padding_size = hidden_size - feature_vector.shape[-1]
+                            feature_vector = torch.cat([feature_vector, torch.zeros(padding_size, device=feature_vector.device, dtype=feature_vector.dtype)])
+                    
+                    # Reshape to match layer output: [1, 1, hidden_size]
+                    steering_vector = feature_vector.unsqueeze(0).unsqueeze(0)
+                    model.model.layers[layer_idx].output[0][:, :] -= coefficient * steering_vector
         
         outputs = model.generator.output.save()
                     
@@ -611,13 +643,20 @@ def emotional_steering_pipeline(model, tokenizer, feature_vectors, steering_conf
         # Handle special compound cases like "pessimistic-projection"
         if len(parts) == 3 and parts[1] == "projection":
             negative_label = f"{parts[0]}-{parts[1]}"  # "pessimistic-projection"
-            positive_label = parts[2] + "-thinking" if not parts[2].endswith("-thinking") else parts[2]
+            # Special case: if positive label is "baseline", don't add "-thinking"
+            if parts[2] == "baseline":
+                positive_label = parts[2]
+            else:
+                positive_label = parts[2] + "-thinking" if not parts[2].endswith("-thinking") else parts[2]
         elif len(parts) == 2:
             negative_label, positive_label = parts
             # Add "-thinking" suffix if not already present and not a special compound label
             if not negative_label.endswith(("-thinking", "-projection", "-attribution")):
                 negative_label = negative_label + "-thinking"
-            if not positive_label.endswith(("-thinking", "-projection", "-attribution")):
+            # Special case: if positive label is "baseline", don't add "-thinking"
+            if positive_label == "baseline":
+                pass  # Keep as is
+            elif not positive_label.endswith(("-thinking", "-projection", "-attribution")):
                 positive_label = positive_label + "-thinking"
         else:
             raise ValueError(f"Invalid target_emotional_direction format: {target_emotional_direction}")
